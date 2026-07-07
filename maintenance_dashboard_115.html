@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>115年 機電/交控系統維護通報管制表</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg0:#f4f6fa;--bg1:#fff;--bg2:#f8f9fc;
+  --border:#e2e6ef;--border2:#d0d6e4;
+  --txt1:#1a2035;--txt2:#5a6480;--txt3:#8892a8;
+  --blue:#3266ad;--blue-l:#e6f1fb;--blue-d:#185fa5;
+  --green:#1d9e75;--green-l:#e1f5ee;--green-d:#0f6e56;
+  --amber:#ef9f27;--amber-l:#faeeda;--amber-d:#854f0b;
+  --red:#a32d2d;--red-l:#fcebeb;--orange:#d85a30;
+  --radius:10px;--radius-sm:6px;
+  --shadow:0 1px 4px rgba(0,0,0,.06),0 2px 12px rgba(0,0,0,.04);
+}
+body{background:var(--bg0);font-family:'Segoe UI','PingFang TC','Microsoft JhengHei',sans-serif;color:var(--txt1);font-size:14px;line-height:1.5}
+.wrap{max-width:1200px;margin:0 auto;padding:1.25rem 1rem 2rem}
+.header{display:flex;align-items:flex-start;gap:12px;margin-bottom:1.25rem;flex-wrap:wrap}
+.header-icon{width:42px;height:42px;border-radius:var(--radius-sm);background:var(--blue-l);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.header-icon svg{width:22px;height:22px;fill:var(--blue)}
+.header-text{flex:1;min-width:0}
+.header-text h1{font-size:17px;font-weight:600;color:var(--txt1)}
+.header-text p{font-size:11px;color:var(--txt2);margin-top:2px}
+.header-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+
+/* ── 設定面板 ── */
+.config-panel{background:var(--bg1);border:.5px solid var(--border);border-radius:var(--radius);margin-bottom:1rem;box-shadow:var(--shadow);overflow:hidden}
+.config-head{display:flex;align-items:center;gap:8px;padding:.75rem 1rem;background:var(--bg2);border-bottom:.5px solid var(--border);cursor:pointer;user-select:none}
+.config-head:hover{background:#eef2f8}
+.config-head svg{width:15px;height:15px;fill:#34a853;flex-shrink:0}
+.config-head-title{font-size:13px;font-weight:600;color:var(--txt1);flex:1}
+.config-head-sub{font-size:11px;color:var(--txt2);margin-right:8px}
+.config-toggle{font-size:11px;color:var(--txt3);transition:transform .2s;flex-shrink:0}
+.config-toggle.open{transform:rotate(180deg)}
+.config-body{padding:1rem 1.25rem;display:none}
+.config-body.open{display:block}
+
+/* 說明步驟 */
+.setup-box{background:var(--blue-l);border:.5px solid #c5d9f0;border-radius:var(--radius-sm);padding:.875rem 1rem;margin-bottom:1rem;font-size:12px;color:var(--blue-d);line-height:1.9}
+.setup-box strong{font-weight:600;color:var(--blue-d)}
+.setup-box ol{margin-left:1.2rem;margin-top:4px}
+.setup-box code{background:rgba(50,102,173,.12);padding:1px 5px;border-radius:3px;font-family:Consolas,monospace;font-size:11px}
+
+/* URL 輸入 */
+.input-grid{display:flex;flex-direction:column;gap:10px;margin-bottom:1rem}
+.input-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.input-row label{font-size:12px;font-weight:600;color:var(--txt2);flex-shrink:0;min-width:140px}
+.input-row input{flex:1;min-width:260px;font-size:11px;padding:6px 10px;border:.5px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg2);color:var(--txt1);font-family:Consolas,monospace}
+.input-row input:focus{outline:2px solid var(--blue);outline-offset:1px}
+.input-row input.err{border-color:var(--red);background:var(--red-l)}
+.input-row input::placeholder{color:var(--txt3)}
+.config-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+
+.status-bar{display:flex;align-items:center;gap:8px;padding:.55rem 1rem;background:var(--bg2);border-top:.5px solid var(--border);font-size:11px;color:var(--txt3)}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;transition:background .3s}
+.dot.ok{background:var(--green)}
+.dot.loading{background:var(--amber);animation:pulse 1s infinite}
+.dot.error{background:var(--red)}
+.dot.idle{background:var(--border2)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── 按鈕 ── */
+.btn{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);cursor:pointer;border:.5px solid transparent;transition:all .15s;white-space:nowrap;font-family:inherit}
+.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-primary:hover{background:var(--blue-d)}
+.btn-ghost{background:var(--bg2);color:var(--txt2);border-color:var(--border2)}
+.btn-ghost:hover{background:var(--blue-l);color:var(--blue-d);border-color:var(--blue)}
+.btn-sm{font-size:11px;padding:3px 9px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* ── 篩選列 ── */
+.filter-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:var(--bg1);border:.5px solid var(--border);border-radius:var(--radius);padding:.875rem 1rem;margin-bottom:1rem;box-shadow:var(--shadow)}
+.filter-bar label{font-size:12px;font-weight:500;color:var(--txt2);white-space:nowrap}
+.filter-bar select{font-size:12px;padding:5px 8px;border:.5px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg2);color:var(--txt1);cursor:pointer;min-width:145px}
+.filter-count{margin-left:auto;font-size:11px;color:var(--txt2);background:var(--bg2);padding:3px 10px;border-radius:var(--radius-sm);border:.5px solid var(--border);white-space:nowrap}
+.filter-count strong{color:var(--txt1)}
+
+/* ── KPI ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:1rem}
+.kpi-card{background:var(--bg1);border:.5px solid var(--border);border-radius:var(--radius);padding:.875rem 1rem;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow)}
+.kpi-icon{width:38px;height:38px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.kpi-icon svg{width:18px;height:18px}
+.kpi-label{font-size:10px;color:var(--txt2);font-weight:500}
+.kpi-val{font-size:21px;font-weight:600;color:var(--txt1);line-height:1.2;margin-top:2px}
+.kpi-unit{font-size:11px;font-weight:400;color:var(--txt2);margin-left:2px}
+
+/* ── 圖表 ── */
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem}
+.chart-card{background:var(--bg1);border:.5px solid var(--border);border-radius:var(--radius);padding:1rem;box-shadow:var(--shadow)}
+.chart-title{font-size:12px;font-weight:600;color:var(--txt1);margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.chart-title svg{width:14px;height:14px;fill:var(--txt2);flex-shrink:0}
+.legend-wrap{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+.legend-item{display:inline-flex;align-items:center;gap:3px;font-size:10px;color:var(--txt2)}
+.legend-item span{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.line-full{grid-column:1/-1}
+
+/* ── 卡片 ── */
+.section-card{background:var(--bg1);border:.5px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-bottom:1rem}
+.section-head{display:flex;align-items:center;gap:8px;padding:.75rem 1rem;border-bottom:.5px solid var(--border);background:var(--bg2);flex-wrap:wrap}
+.section-head svg{width:15px;height:15px;fill:var(--blue);flex-shrink:0}
+.section-head h2{font-size:13px;font-weight:600;color:var(--txt1)}
+.section-head .hint{font-size:10px;color:var(--txt2);margin-left:2px}
+.ml-auto{margin-left:auto}
+.badge{font-size:10px;padding:2px 8px;border-radius:var(--radius-sm)}
+.badge-blue{background:var(--blue-l);color:var(--blue-d)}
+.badge-gray{background:var(--bg2);color:var(--txt2);border:.5px solid var(--border)}
+
+/* ── 表格 ── */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+thead th{padding:8px 10px;font-size:11px;font-weight:500;color:var(--txt2);text-align:left;border-bottom:.5px solid var(--border);background:var(--bg2);white-space:nowrap}
+thead th.r{text-align:right}
+thead th.sortable{cursor:pointer;user-select:none}
+thead th.sortable:hover{color:var(--txt1)}
+tbody td{padding:8px 10px;font-size:12px;border-bottom:.5px solid var(--border);color:var(--txt1);vertical-align:middle}
+tbody td.r{text-align:right}
+tbody td.mono{font-family:Consolas,'Courier New',monospace;font-size:10px;color:var(--txt2)}
+tbody tr:hover{background:rgba(50,102,173,.03)}
+tbody tr.top-row{background:rgba(50,102,173,.04)}
+.chip{font-size:10px;padding:1px 6px;border-radius:3px;display:inline-block;white-space:nowrap}
+.chip-blue{background:var(--blue-l);color:var(--blue-d)}
+.chip-green{background:var(--green-l);color:var(--green-d)}
+.chip-amber{background:var(--amber-l);color:var(--amber-d)}
+.chip-red{background:var(--red-l);color:var(--red)}
+.num-red{color:var(--red);font-weight:600}
+.num-amber{color:var(--amber-d);font-weight:600}
+.sort-icon{font-size:10px;color:#bbb;margin-left:2px}
+.sort-icon.active{color:var(--txt1)}
+.dev-link{color:var(--blue-d);cursor:pointer;border-bottom:1px dashed var(--blue-l);transition:color .15s}
+.dev-link:hover{color:var(--blue);border-bottom-color:var(--blue)}
+
+/* ── 彈窗 ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(10,20,50,.45);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+.modal-overlay.open{display:flex}
+.modal{width:min(900px,96vw);max-height:88vh;background:var(--bg1);border-radius:var(--radius);box-shadow:0 8px 40px rgba(0,0,0,.2);display:flex;flex-direction:column;animation:popIn .2s ease;overflow:hidden}
+@keyframes popIn{from{transform:scale(.95) translateY(10px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+.modal-head{padding:1rem 1.25rem;border-bottom:.5px solid var(--border);background:var(--bg2);flex-shrink:0}
+.modal-head-r1{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.modal-head-r1 h3{font-size:15px;font-weight:600;color:var(--txt1);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.modal-close{width:30px;height:30px;border-radius:6px;border:.5px solid var(--border2);background:var(--bg1);cursor:pointer;font-size:18px;color:var(--txt2);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.modal-close:hover{background:var(--red-l);color:var(--red)}
+.modal-meta{display:flex;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--txt2)}
+.modal-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:.875rem 1.25rem;border-bottom:.5px solid var(--border);flex-shrink:0}
+.mk-card{background:var(--bg2);border:.5px solid var(--border);border-radius:var(--radius-sm);padding:.6rem .875rem;text-align:center}
+.mk-num{font-size:22px;font-weight:600;line-height:1.2}
+.mk-lbl{font-size:10px;color:var(--txt2);margin-top:2px}
+.modal-body{flex:1;overflow-y:auto;padding:1rem 1.25rem}
+.modal-body table thead th{position:sticky;top:0;z-index:1}
+.modal-empty{text-align:center;padding:3rem;color:var(--txt2);font-size:13px}
+
+/* ── 分頁 ── */
+.pager{display:flex;align-items:center;justify-content:center;gap:6px;padding:.75rem;border-top:.5px solid var(--border)}
+.pager button{font-size:11px;padding:4px 10px;border:.5px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg2);color:var(--txt2);cursor:pointer;transition:all .15s}
+.pager button.active{background:var(--blue-l);color:var(--blue-d);border-color:var(--blue)}
+.pager button:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── Loading ── */
+.loading-mask{display:none;position:fixed;inset:0;background:rgba(244,246,250,.9);z-index:300;align-items:center;justify-content:center;flex-direction:column;gap:12px;backdrop-filter:blur(2px)}
+.loading-mask.show{display:flex}
+.spinner{width:36px;height:36px;border:3px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:13px;color:var(--txt2)}
+
+.footer{margin-top:.75rem;font-size:10px;color:var(--txt3);text-align:center}
+@media(max-width:860px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .chart-grid{grid-template-columns:1fr}
+  .line-full{grid-column:unset}
+  .modal-kpi{grid-template-columns:repeat(2,1fr)}
+  .input-row label{min-width:unset}
+}
+</style>
+</head>
+<body>
+
+<div class="loading-mask" id="loadingMask">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loadingText">載入中…</div>
+</div>
+
+<div class="wrap">
+
+  <!-- 標題 -->
+  <div class="header">
+    <div class="header-icon">
+      <svg viewBox="0 0 24 24"><path d="M9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4zm2.5 2.1H4.5a.5.5 0 0 1-.5-.5v-13a.5.5 0 0 1 .5-.5h15a.5.5 0 0 1 .5.5v13a.5.5 0 0 1-.5.5zM4.5 3A2.5 2.5 0 0 0 2 5.6v12.9A2.5 2.5 0 0 0 4.5 21h15a2.5 2.5 0 0 0 2.5-2.5V5.6A2.5 2.5 0 0 0 19.5 3H4.5z"/></svg>
+    </div>
+    <div class="header-text">
+      <h1>115年 機電 / 交控系統維護通報管制表</h1>
+      <p id="headerSub">故障統計分析・設備異常排名・月別趨勢</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-ghost" id="btnRefresh" onclick="loadAll()">
+        <svg style="width:13px;height:13px;fill:currentColor" viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+        重新整理
+      </button>
+    </div>
+  </div>
+
+  <!-- 雲端設定面板 -->
+  <div class="config-panel">
+    <div class="config-head" onclick="toggleConfig()">
+      <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>
+      <span class="config-head-title">Google Sheets 雲端設定</span>
+      <span class="config-head-sub" id="cfgSub">請完成以下設定</span>
+      <span class="config-toggle open" id="cfgToggle">▼</span>
+    </div>
+
+    <div class="config-body open" id="cfgBody">
+
+      <!-- 步驟說明 -->
+      <div class="setup-box">
+        <strong>🔧 第一次使用：需建立 Google Apps Script 橋接器（只需做一次）</strong>
+        <ol>
+          <li>開啟你的 Google Sheets → 上方選單「<strong>擴充功能</strong>」→「<strong>Apps Script</strong>」</li>
+          <li>刪除預設程式碼，<strong>複製下方框框內的程式碼</strong>貼上</li>
+          <li>點上方「<strong>儲存</strong>」→「<strong>部署</strong>」→「<strong>新增部署作業</strong>」</li>
+          <li>類型選「<strong>網頁應用程式</strong>」，執行身分選「<strong>我</strong>」，存取權選「<strong>任何人</strong>」</li>
+          <li>點「<strong>部署</strong>」→「<strong>授權存取</strong>」→ 複製產生的 <strong>網頁應用程式 URL</strong></li>
+          <li>將 URL 貼到下方「Apps Script 網址」欄位，點「<strong>儲存並載入</strong>」</li>
+        </ol>
+      </div>
+
+      <!-- Apps Script 程式碼複製區 -->
+      <div style="margin-bottom:1rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <span style="font-size:12px;font-weight:600;color:var(--txt2)">📋 Apps Script 程式碼（複製後貼到 Apps Script 編輯器）</span>
+          <button class="btn btn-ghost btn-sm" onclick="copyCode()">複製程式碼</button>
+        </div>
+        <pre id="scriptCode" style="background:#1e2535;color:#a9b7d0;font-size:11px;padding:1rem;border-radius:var(--radius-sm);overflow-x:auto;line-height:1.7;font-family:Consolas,monospace;border:.5px solid var(--border2)">function doGet(e) {
+  var sheetId   = e.parameter.id;
+  var sheetName = e.parameter.sheet;
+  try {
+    var ss  = SpreadsheetApp.openById(sheetId);
+    var ws  = ss.getSheetByName(sheetName);
+    if (!ws) return out({error: "找不到工作表: " + sheetName});
+    var data = ws.getDataRange().getValues();
+    return out(data);
+  } catch(err) {
+    return out({error: err.toString()});
+  }
+}
+function out(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}</pre>
+      </div>
+
+      <!-- 輸入欄位 -->
+      <div class="input-grid">
+        <div class="input-row">
+          <label>🔗 Apps Script 網址</label>
+          <input type="text" id="inApiUrl"
+            placeholder="https://script.google.com/macros/s/xxxxxx/exec"
+            style="font-size:11px"/>
+        </div>
+        <div class="input-row">
+          <label>📄 Spreadsheet ID</label>
+          <input type="text" id="inSheetId"
+            value="1B4GZC9rZx-Ryt-TKlD6_dUDaordo_KhABKadAGDokDI"
+            placeholder="試算表 ID（網址中 /d/ 後面的字串）"/>
+        </div>
+      </div>
+
+      <!-- 動作列 -->
+      <div class="config-actions">
+        <button class="btn btn-primary" onclick="saveAndLoad()">
+          <svg style="width:13px;height:13px;fill:currentColor" viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+          儲存並載入
+        </button>
+        <button class="btn btn-ghost" onclick="loadAll()">
+          <svg style="width:13px;height:13px;fill:currentColor" viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+          重新整理
+        </button>
+        <span style="font-size:11px;color:var(--txt3)">自動更新：</span>
+        <select id="autoSel" onchange="setAutoRefresh()" style="font-size:11px;padding:3px 7px;border:.5px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg2)">
+          <option value="0">關閉</option>
+          <option value="5">每 5 分鐘</option>
+          <option value="10">每 10 分鐘</option>
+          <option value="30">每 30 分鐘</option>
+          <option value="60">每 1 小時</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="status-bar">
+      <div class="dot idle" id="dot"></div>
+      <span id="statusTxt">尚未設定</span>
+    </div>
+  </div>
+
+  <!-- 篩選列 -->
+  <div class="filter-bar">
+    <svg style="width:15px;height:15px;fill:var(--txt2);flex-shrink:0" viewBox="0 0 24 24"><path d="M4.25 5.61C6.57 8.59 10 13 10 13v6c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-6s3.43-4.41 5.75-7.39c.51-.66.04-1.61-.79-1.61H5.04c-.83 0-1.3.95-.79 1.61z"/></svg>
+    <label>活頁</label>
+    <select id="selSheet" onchange="onSheetChange(this.value)"><option value="ALL">全部活頁</option></select>
+    <label>系統</label>
+    <select id="selSys" onchange="onSysChange(this.value)"><option value="ALL">全部系統</option></select>
+    <label>設備種類</label>
+    <select id="selCat" onchange="onCatChange(this.value)"><option value="ALL">全部設備種類</option></select>
+    <button class="btn btn-ghost btn-sm" id="btnReset" onclick="resetAll()" style="display:none">✕ 清除篩選</button>
+    <div class="filter-count">篩選結果：<strong id="filterCount">—</strong> 筆</div>
+  </div>
+
+  <!-- KPI -->
+  <div class="kpi-grid">
+    <div class="kpi-card"><div class="kpi-icon" style="background:var(--blue-l)"><svg viewBox="0 0 24 24" style="fill:var(--blue)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg></div><div><div class="kpi-label">總故障次數</div><div class="kpi-val"><span id="kpiTotal">—</span><span class="kpi-unit">次</span></div></div></div>
+    <div class="kpi-card"><div class="kpi-icon" style="background:var(--red-l)"><svg viewBox="0 0 24 24" style="fill:var(--red)"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/></svg></div><div><div class="kpi-label">待結案件數</div><div class="kpi-val"><span id="kpiOpen">—</span><span class="kpi-unit">件</span></div></div></div>
+    <div class="kpi-card"><div class="kpi-icon" style="background:var(--green-l)"><svg viewBox="0 0 24 24" style="fill:var(--green)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></div><div><div class="kpi-label">已結案件數</div><div class="kpi-val"><span id="kpiClosed">—</span><span class="kpi-unit">件</span></div></div></div>
+    <div class="kpi-card"><div class="kpi-icon" style="background:var(--amber-l)"><svg viewBox="0 0 24 24" style="fill:var(--amber)"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg></div><div><div class="kpi-label">大故障次數</div><div class="kpi-val"><span id="kpiMajor">—</span><span class="kpi-unit">次</span></div></div></div>
+    <div class="kpi-card"><div class="kpi-icon" style="background:var(--green-l)"><svg viewBox="0 0 24 24" style="fill:var(--green-d)"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg></div><div><div class="kpi-label">平均修復天數</div><div class="kpi-val"><span id="kpiDays">—</span><span class="kpi-unit" id="kpiDaysUnit"></span></div></div></div>
+  </div>
+
+  <!-- 圖表 -->
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>故障系統分佈</div>
+      <div class="legend-wrap" id="pieLegend"></div>
+      <div style="position:relative;height:200px"><canvas id="pieChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title"><svg viewBox="0 0 24 24"><path d="M5 9.2h3V19H5V9.2zM10.6 5h2.8v14h-2.8V5zm5.6 8H19v6h-2.8v-6z"/></svg>設備種類故障 Top 10</div>
+      <div style="position:relative;height:230px"><canvas id="barChart"></canvas></div>
+    </div>
+    <div class="chart-card line-full">
+      <div class="chart-title"><svg viewBox="0 0 24 24"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z"/></svg>月別故障件數趨勢</div>
+      <div style="position:relative;height:150px"><canvas id="lineChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- 設備統計總表 -->
+  <div class="section-card">
+    <div class="section-head">
+      <svg viewBox="0 0 24 24"><path d="M10 10.02h5V21h-5zM17 21h3c1.1 0 2-.9 2-2v-9h-5v11zm3-18H5c-1.1 0-2 .9-2 2v3h19V5c0-1.1-.9-2-2-2zM3 19c0 1.1.9 2 2 2h3V10H3v9z"/></svg>
+      <h2>設備故障統計總表</h2>
+      <span class="hint">— 點欄位排序・點<span style="color:var(--blue-d)">設備名稱</span>查看歷史故障單</span>
+      <span class="badge badge-blue ml-auto" id="devCount">—</span>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th style="width:36px;text-align:center">#</th>
+          <th class="sortable" onclick="sortBy('cat')">設備種類<span class="sort-icon" id="srt-cat">⇅</span></th>
+          <th class="sortable" onclick="sortBy('name')">設備名稱/編號<span class="sort-icon" id="srt-name">⇅</span></th>
+          <th class="sortable" onclick="sortBy('sys')">系統<span class="sort-icon" id="srt-sys">⇅</span></th>
+          <th class="sortable r" onclick="sortBy('faults')">故障次數<span class="sort-icon active" id="srt-faults">▼</span></th>
+          <th class="sortable r" onclick="sortBy('open')">待結案<span class="sort-icon" id="srt-open">⇅</span></th>
+          <th class="sortable r" onclick="sortBy('major')">大故障<span class="sort-icon" id="srt-major">⇅</span></th>
+          <th class="sortable r" onclick="sortBy('locs')">涉及地點<span class="sort-icon" id="srt-locs">⇅</span></th>
+        </tr></thead>
+        <tbody id="devBody"><tr><td colspan="8" style="text-align:center;padding:2.5rem;color:var(--txt3)">請先完成雲端設定並載入資料</td></tr></tbody>
+      </table>
+    </div>
+    <div id="devMore" style="display:none;padding:.5rem 1rem;border-top:.5px solid var(--border);font-size:11px;color:var(--txt2);text-align:center"></div>
+  </div>
+
+  <!-- 故障明細 -->
+  <div class="section-card">
+    <div class="section-head">
+      <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+      <h2>故障事件明細</h2>
+      <span class="badge badge-gray ml-auto" id="detailInfo">—</span>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>故障單號</th><th>通報時間</th><th>活頁</th><th>系統</th>
+          <th>設備種類</th><th>設備名稱</th><th>位置</th><th>等級</th>
+          <th style="text-align:center">結案</th>
+        </tr></thead>
+        <tbody id="detailBody"><tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--txt3)">載入資料後顯示</td></tr></tbody>
+      </table>
+    </div>
+    <div class="pager" id="pager"></div>
+  </div>
+
+  <div class="footer" id="footerTxt">資料來源：Google Sheets 雲端同步</div>
+</div>
+
+<!-- 彈窗 -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-head-r1">
+        <svg style="width:18px;height:18px;fill:var(--blue);flex-shrink:0" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+        <h3 id="modalTitle">設備歷史故障單</h3>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-meta" id="modalMeta"></div>
+    </div>
+    <div class="modal-kpi" id="modalKpi"></div>
+    <div class="modal-body">
+      <table>
+        <thead><tr>
+          <th>故障單號</th><th>通報時間</th><th>修護完成</th>
+          <th style="text-align:center">修復天數</th>
+          <th>等級</th><th style="text-align:center">結案</th>
+          <th>位置</th><th>故障說明</th>
+        </tr></thead>
+        <tbody id="modalBody"></tbody>
+      </table>
+      <div id="modalEmpty" class="modal-empty" style="display:none">此設備目前無故障紀錄</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  ★ 欄位對應（A欄=0, B欄=1…依試算表實際欄位調整）
+// ═══════════════════════════════════════════════════════
+const COL = {
+  location:    1,   // B 位置/里程
+  faultType:   2,   // C 故障種類（系統）
+  severity:    3,   // D 故障等級
+  caseNo:      4,   // E 故障單號
+  notifyTime:  5,   // F 故障通知時間
+  vendor:      7,   // H 廠商
+  deviceCat:   9,   // J 設備總類
+  deviceName:  10,  // K 設備名稱/編號
+  fixTime:     11,  // L 修護完成時間
+  description: 13,  // N 故障說明
+  partSpec:    15,  // P 更換備品規格及數量
+  closed:      18,  // S 結案（O/V）
+};
+const SKIP_ROWS = 2; // 跳過前 N 列標題
+
+// 要讀取的工作表（與活頁名稱一致）
+const SHEETS = [
+  { name: "C3EM機電系統-佛廣大",   cls: "chip-blue"  },
+  { name: "C3T交控系統-華電",      cls: "chip-green" },
+  { name: "C3EM機電系統-中興電工", cls: "chip-amber" },
+];
+
+// ═══════════════════════════════════════════════════════
+//  全域狀態
+// ═══════════════════════════════════════════════════════
+let RAW = [], filtered = [];
+let selSheet="ALL", selSys="ALL", selCat="ALL";
+let sortCol="faults", sortDir="desc";
+let curPage=1;
+const PAGE=15;
+let autoTimer=null;
+let pieInst=null, barInst=null, lineInst=null;
+const PAL=["#3266ad","#1d9e75","#ef9f27","#d4537e","#7f77dd","#d85a30","#0f6e56","#854f0b","#a32d2d","#185fa5","#3b6d11","#4b1528"];
+
+// ═══════════════════════════════════════════════════════
+//  工具
+// ═══════════════════════════════════════════════════════
+const esc=s=>String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const escQ=s=>String(s||"").replace(/'/g,"&#39;");
+const clean=s=>String(s||"").replace(/[\n\r\t]/g," ").replace(/\\/g,"／").trim();
+
+function parseDate(s){
+  if(!s)return null;
+  s=clean(s);
+  let m=s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})\s+(\d{1,2}):(\d{2})/);
+  if(m)return new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5]);
+  m=s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+  if(m)return new Date(+m[1],+m[2]-1,+m[3]);
+  return null;
+}
+function fmtDate(s){
+  const d=parseDate(s);
+  if(!d)return s||"—";
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+}
+function calcDays(a,b){
+  const da=parseDate(a),db=parseDate(b);
+  if(!da||!db)return null;
+  const d=(db-da)/86400000;
+  return d>=0&&d<400?Math.round(d*10)/10:null;
+}
+function setDot(state,msg){
+  document.getElementById("dot").className="dot "+state;
+  document.getElementById("statusTxt").textContent=msg;
+}
+function showLoad(msg){document.getElementById("loadingText").textContent=msg||"載入中…";document.getElementById("loadingMask").classList.add("show");}
+function hideLoad(){document.getElementById("loadingMask").classList.remove("show");}
+
+// ═══════════════════════════════════════════════════════
+//  localStorage
+// ═══════════════════════════════════════════════════════
+function save(){
+  localStorage.setItem("gs_api",document.getElementById("inApiUrl").value.trim());
+  localStorage.setItem("gs_id", document.getElementById("inSheetId").value.trim());
+}
+function restore(){
+  const api=localStorage.getItem("gs_api")||"";
+  const id =localStorage.getItem("gs_id") ||"1B4GZC9rZx-Ryt-TKlD6_dUDaordo_KhABKadAGDokDI";
+  document.getElementById("inApiUrl").value=api;
+  document.getElementById("inSheetId").value=id;
+}
+function saveAndLoad(){save();loadAll();}
+
+// ═══════════════════════════════════════════════════════
+//  Apps Script 資料拉取
+// ═══════════════════════════════════════════════════════
+async function loadAll(){
+  const apiUrl=document.getElementById("inApiUrl").value.trim();
+  const sheetId=document.getElementById("inSheetId").value.trim();
+  if(!apiUrl||!sheetId){
+    // 展開設定面板提示
+    document.getElementById("cfgBody").classList.add("open");
+    document.getElementById("cfgToggle").classList.add("open");
+    setDot("error","❌ 請先填入 Apps Script 網址與 Spreadsheet ID");
+    return;
+  }
+  showLoad("連線到 Google Sheets…");
+  setDot("loading","載入中…");
+  document.getElementById("btnRefresh").disabled=true;
+
+  const all=[], errs=[];
+  for(const sh of SHEETS){
+    try{
+      document.getElementById("loadingText").textContent=`載入：${sh.name}…`;
+      const url=`${apiUrl}?id=${encodeURIComponent(sheetId)}&sheet=${encodeURIComponent(sh.name)}`;
+      const resp=await fetch(url);
+      if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
+      const json=await resp.json();
+      if(json.error)throw new Error(json.error);
+      // json 是二維陣列
+      for(let ri=SKIP_ROWS;ri<json.length;ri++){
+        const row=json[ri];
+        if(!row||(!row[0]&&!row[COL.caseNo]))continue;
+        all.push({
+          sheet:      sh.name,
+          sheetCls:   sh.cls,
+          faultType:  clean(row[COL.faultType] ||""),
+          severity:   clean(row[COL.severity]  ||""),
+          notifyTime: fmtDate(row[COL.notifyTime]||""),
+          fixTime:    fmtDate(row[COL.fixTime]   ||""),
+          vendor:     clean(row[COL.vendor]    ||""),
+          deviceCat:  clean(row[COL.deviceCat] ||"").slice(0,40),
+          deviceName: clean(row[COL.deviceName]||"").slice(0,50),
+          partSpec:   clean(row[COL.partSpec]  ||"").slice(0,40),
+          closed:     clean(row[COL.closed]    ||""),
+          location:   clean(row[COL.location]  ||"").slice(0,40),
+          caseNo:     clean(row[COL.caseNo]    ||"").slice(0,25),
+          description:clean(row[COL.description]||"").slice(0,100),
+        });
+      }
+    }catch(e){errs.push(`${sh.name}：${e.message}`);}
+  }
+
+  document.getElementById("btnRefresh").disabled=false;
+  hideLoad();
+
+  if(all.length===0){
+    setDot("error","❌ 載入失敗 — "+(errs[0]||"請確認 Apps Script 已正確部署"));
+    return;
+  }
+  RAW=all;
+  const now=new Date();
+  const ts=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")} ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+  const warn=errs.length?` ⚠️ 部分失敗：${errs.join("；")}`:"";
+  setDot("ok",`已載入 ${RAW.length} 筆｜${ts}${warn}`);
+  document.getElementById("cfgSub").textContent=`已載入 ${RAW.length} 筆｜${ts}`;
+  document.getElementById("headerSub").textContent=`故障統計分析・設備異常排名 ｜ 共 ${RAW.length} 筆｜最後更新：${ts}`;
+  document.getElementById("footerTxt").textContent=`資料來源：Google Sheets 雲端同步｜共 ${RAW.length} 筆｜更新：${ts}`;
+
+  // 收起設定面板
+  document.getElementById("cfgBody").classList.remove("open");
+  document.getElementById("cfgToggle").classList.remove("open");
+
+  selSheet="ALL";selSys="ALL";selCat="ALL";curPage=1;
+  updSheet();updSys();updCat();renderAll();
+}
+
+function setAutoRefresh(){
+  const min=parseInt(document.getElementById("autoSel").value);
+  if(autoTimer){clearInterval(autoTimer);autoTimer=null;}
+  if(min>0)autoTimer=setInterval(loadAll,min*60*1000);
+}
+
+// ═══════════════════════════════════════════════════════
+//  篩選下拉
+// ═══════════════════════════════════════════════════════
+function updSheet(){
+  const opts=[...new Set(RAW.map(r=>r.sheet))];
+  document.getElementById("selSheet").innerHTML=
+    `<option value="ALL">全部活頁（${opts.length} 個）</option>`+
+    opts.map(s=>`<option value="${escQ(s)}">${esc(s)}</option>`).join("");
+  document.getElementById("selSheet").value="ALL";
+}
+function updSys(){
+  let b=selSheet==="ALL"?RAW:RAW.filter(r=>r.sheet===selSheet);
+  const list=[...new Set(b.map(r=>r.faultType).filter(Boolean))].sort();
+  document.getElementById("selSys").innerHTML=
+    `<option value="ALL">全部系統</option>`+
+    list.map(s=>`<option value="${escQ(s)}">${esc(s)}</option>`).join("");
+  document.getElementById("selSys").value=selSys==="ALL"?"ALL":selSys;
+}
+function updCat(){
+  let b=RAW;
+  if(selSheet!=="ALL")b=b.filter(r=>r.sheet===selSheet);
+  if(selSys!=="ALL")  b=b.filter(r=>r.faultType===selSys);
+  const cats=[...new Set(b.map(r=>r.deviceCat).filter(v=>v&&v!=="無"))].sort();
+  document.getElementById("selCat").innerHTML=
+    `<option value="ALL">全部設備種類</option>`+
+    cats.map(c=>`<option value="${escQ(c)}">${esc(c)}</option>`).join("");
+  document.getElementById("selCat").value=selCat==="ALL"?"ALL":selCat;
+}
+function onSheetChange(v){selSheet=v;selSys="ALL";selCat="ALL";curPage=1;updSys();updCat();renderAll();}
+function onSysChange(v)  {selSys=v;              selCat="ALL";curPage=1;updCat();renderAll();}
+function onCatChange(v)  {selCat=v;curPage=1;renderAll();}
+function resetAll()      {selSheet="ALL";selSys="ALL";selCat="ALL";curPage=1;updSheet();updSys();updCat();renderAll();}
+
+// ═══════════════════════════════════════════════════════
+//  過濾 & 重繪
+// ═══════════════════════════════════════════════════════
+function applyFilter(){
+  filtered=RAW.filter(r=>{
+    if(selSheet!=="ALL"&&r.sheet!==selSheet)return false;
+    if(selSys!=="ALL"&&r.faultType!==selSys)return false;
+    if(selCat!=="ALL"&&r.deviceCat!==selCat)return false;
+    return true;
+  });
+}
+function renderAll(){
+  applyFilter();
+  const hasFil=selSheet!=="ALL"||selSys!=="ALL"||selCat!=="ALL";
+  document.getElementById("btnReset").style.display=hasFil?"":"none";
+  document.getElementById("filterCount").textContent=filtered.length;
+  renderKPI();renderPie();renderBar();renderLine();renderDevTable();renderDetail();
+}
+
+// KPI
+function renderKPI(){
+  const n=filtered.length,cl=filtered.filter(r=>r.closed==="V"||r.closed==="O").length;
+  const mj=filtered.filter(r=>r.severity==="大故障").length;
+  const da=filtered.map(r=>calcDays(r.notifyTime,r.fixTime)).filter(v=>v!==null);
+  const avg=da.length?(da.reduce((a,b)=>a+b,0)/da.length).toFixed(1):null;
+  document.getElementById("kpiTotal").textContent=n;
+  document.getElementById("kpiOpen").textContent=n-cl;
+  document.getElementById("kpiClosed").textContent=cl;
+  document.getElementById("kpiMajor").textContent=mj;
+  document.getElementById("kpiDays").textContent=avg??"—";
+  document.getElementById("kpiDaysUnit").textContent=avg?"天":"";
+}
+
+// 圓餅
+function renderPie(){
+  const cnt={};filtered.forEach(r=>{if(r.faultType)cnt[r.faultType]=(cnt[r.faultType]||0)+1;});
+  const d=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const lb=d.map(x=>x[0]),vl=d.map(x=>x[1]),cl=lb.map((_,i)=>PAL[i%PAL.length]);
+  document.getElementById("pieLegend").innerHTML=lb.map((l,i)=>`<span class="legend-item"><span style="background:${cl[i]}"></span>${esc(l)} ${vl[i]}</span>`).join("");
+  const ctx=document.getElementById("pieChart").getContext("2d");
+  if(pieInst)pieInst.destroy();
+  pieInst=new Chart(ctx,{type:"doughnut",data:{labels:lb,datasets:[{data:vl,backgroundColor:cl,borderWidth:2,borderColor:"#fff",hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>" "+c.label+" "+c.raw+"次"}}},cutout:"52%"}});
+}
+
+// 長條
+function renderBar(){
+  const cnt={};filtered.forEach(r=>{if(r.deviceCat&&r.deviceCat!=="無")cnt[r.deviceCat]=(cnt[r.deviceCat]||0)+1;});
+  const d=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const ctx=document.getElementById("barChart").getContext("2d");
+  if(barInst)barInst.destroy();
+  barInst=new Chart(ctx,{type:"bar",data:{labels:d.map(x=>x[0]),datasets:[{data:d.map(x=>x[1]),backgroundColor:"#3266ad",borderRadius:3,label:"故障次數"}]},options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>" "+c.raw+" 次"}}},scales:{x:{ticks:{font:{size:10}},grid:{color:"rgba(0,0,0,.05)"}},y:{ticks:{font:{size:9}},grid:{display:false}}}}});
+}
+
+// 折線
+function renderLine(){
+  const cnt={};filtered.forEach(r=>{if(r.notifyTime&&r.notifyTime.length>=7){const ym=r.notifyTime.slice(0,7);cnt[ym]=(cnt[ym]||0)+1;}});
+  const s=Object.entries(cnt).sort(([a],[b])=>a.localeCompare(b));
+  const lb=s.map(([ym])=>{const[y,m]=ym.split("-");return y.slice(2)+"/"+parseInt(m)+"月";});
+  const ctx=document.getElementById("lineChart").getContext("2d");
+  if(lineInst)lineInst.destroy();
+  lineInst=new Chart(ctx,{type:"line",data:{labels:lb,datasets:[{data:s.map(([,v])=>v),borderColor:"#3266ad",backgroundColor:"rgba(50,102,173,.08)",fill:true,tension:.3,pointRadius:3,pointBackgroundColor:"#3266ad",label:"故障件數"}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>" "+c.raw+" 件"}}},scales:{x:{ticks:{font:{size:10},maxRotation:45},grid:{color:"rgba(0,0,0,.05)"}},y:{ticks:{font:{size:10}},grid:{color:"rgba(0,0,0,.05)"}}}}});
+}
+
+// ── 設備統計總表 ──
+let devStats=[];
+function buildDev(){
+  const mp={};
+  filtered.forEach(r=>{
+    const k=(r.deviceCat||"")+"||"+(r.deviceName||"");
+    if(!mp[k])mp[k]={cat:r.deviceCat||"—",name:r.deviceName||"—",sys:r.faultType||"—",cls:r.sheetCls||"chip-blue",faults:0,open:0,major:0,locs:new Set()};
+    mp[k].faults++;
+    if(r.closed!=="V"&&r.closed!=="O")mp[k].open++;
+    if(r.severity==="大故障")mp[k].major++;
+    if(r.location)mp[k].locs.add(r.location);
+  });
+  devStats=Object.values(mp).map(e=>({...e,locs:e.locs.size}));
+  devStats.sort((a,b)=>{
+    const av=a[sortCol],bv=b[sortCol];
+    if(typeof av==="number")return sortDir==="desc"?bv-av:av-bv;
+    return sortDir==="desc"?(bv+"").localeCompare(av+"","zh"):(av+"").localeCompare(bv+"","zh");
+  });
+}
+function sortBy(col){
+  if(sortCol===col)sortDir=sortDir==="desc"?"asc":"desc";
+  else{sortCol=col;sortDir="desc";}
+  ["cat","name","sys","faults","open","major","locs"].forEach(c=>{
+    const el=document.getElementById("srt-"+c);if(!el)return;
+    if(c===sortCol){el.textContent=sortDir==="desc"?" ▼":" ▲";el.classList.add("active");}
+    else{el.textContent=" ⇅";el.classList.remove("active");}
+  });
+  buildDev();renderDevBody();
+}
+function renderDevTable(){buildDev();document.getElementById("devCount").textContent="共 "+devStats.length+" 個設備/種類";renderDevBody();}
+function renderDevBody(){
+  const show=devStats.slice(0,50);
+  const rows=show.map((row,i)=>{
+    const fcls=row.faults>=10?"num-red":row.faults>=5?"num-amber":"";
+    const nCell=`<span class="dev-link"
+      onclick='openModal(${JSON.stringify(row.cat)},${JSON.stringify(row.name)},${JSON.stringify(row.sys)},${JSON.stringify(row.cls)})'
+      title="查看歷史故障單">${esc(row.name)}</span>`;
+    return `<tr class="${i===0?"top-row":""}">
+      <td style="text-align:center;font-size:10px;color:var(--txt2)">${i===0?"🔥":(i+1)}</td>
+      <td style="font-size:11px">${esc(row.cat)}</td>
+      <td>${nCell}</td>
+      <td><span class="chip ${row.cls}" style="font-size:10px">${esc(row.sys.slice(0,14))}</span></td>
+      <td class="r ${fcls}">${row.faults}</td>
+      <td class="r" style="color:${row.open>0?"var(--red)":"var(--txt3)"}">${row.open}</td>
+      <td class="r" style="color:${row.major>0?"var(--orange)":"var(--txt3)"}">${row.major}</td>
+      <td class="r">${row.locs}</td>
+    </tr>`;
+  }).join("");
+  document.getElementById("devBody").innerHTML=rows||`<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--txt2)">無符合條件之記錄</td></tr>`;
+  const more=document.getElementById("devMore");
+  if(devStats.length>50){more.style.display="";more.textContent=`顯示前 50 筆，共 ${devStats.length} 個設備/種類`;}
+  else more.style.display="none";
+}
+
+// ── 明細 ──
+function renderDetail(){
+  const tp=Math.max(1,Math.ceil(filtered.length/PAGE));
+  if(curPage>tp)curPage=1;
+  const pd=filtered.slice((curPage-1)*PAGE,curPage*PAGE);
+  document.getElementById("detailInfo").textContent=`第 ${curPage}/${tp} 頁，共 ${filtered.length} 筆`;
+  const rows=pd.map(r=>{
+    const isBig=r.severity==="大故障";
+    const done=r.closed==="V"||r.closed==="O";
+    const shLbl=r.sheet.replace(/機電系統|交控系統/g,"").replace(/[-－].*/,"").trim()||r.sheet.slice(0,5);
+    return `<tr>
+      <td class="mono">${esc(r.caseNo||"不開單")}</td>
+      <td style="font-size:11px;white-space:nowrap">${esc(r.notifyTime||"—")}</td>
+      <td title="${esc(r.sheet)}"><span class="chip ${r.sheetCls}">${esc(shLbl)}</span></td>
+      <td style="font-size:11px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.faultType||"—")}</td>
+      <td style="font-size:11px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.deviceCat||"—")}</td>
+      <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:Consolas,monospace;font-size:10px">${esc(r.deviceName||"—")}</td>
+      <td style="font-size:11px;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.location||"—")}</td>
+      <td><span class="chip ${isBig?"chip-red":"chip-amber"}">${esc(r.severity||"小故障")}</span></td>
+      <td style="text-align:center">${done?`<span style="color:var(--green-d);font-weight:700">✓</span>`:`<span style="color:var(--amber-d)">…</span>`}</td>
+    </tr>`;
+  }).join("");
+  document.getElementById("detailBody").innerHTML=rows||`<tr><td colspan="9" style="text-align:center;padding:1.5rem;color:var(--txt2)">無符合條件之記錄</td></tr>`;
+  let ph=`<button onclick="goPage(${curPage-1})" ${curPage===1?"disabled":""}>‹</button>`;
+  const s=Math.max(1,Math.min(curPage-3,tp-6)),e=Math.min(tp,s+6);
+  for(let p=s;p<=e;p++)ph+=`<button class="${p===curPage?"active":""}" onclick="goPage(${p})">${p}</button>`;
+  ph+=`<button onclick="goPage(${curPage+1})" ${curPage===tp?"disabled":""}>›</button>`;
+  document.getElementById("pager").innerHTML=tp>1?ph:"";
+}
+function goPage(p){const t=Math.max(1,Math.ceil(filtered.length/PAGE));curPage=Math.max(1,Math.min(p,t));renderDetail();}
+
+// ═══════════════════════════════════════════════════════
+//  彈窗：設備歷史故障單
+// ═══════════════════════════════════════════════════════
+function openModal(cat,name,sys,cls){
+  const rec=RAW.filter(r=>r.deviceCat===cat&&r.deviceName===name)
+    .sort((a,b)=>(b.notifyTime||"").localeCompare(a.notifyTime||""));
+  const cl=rec.filter(r=>r.closed==="V"||r.closed==="O").length;
+  const mj=rec.filter(r=>r.severity==="大故障").length;
+  const da=rec.map(r=>calcDays(r.notifyTime,r.fixTime)).filter(v=>v!==null);
+  const avg=da.length?(da.reduce((a,b)=>a+b,0)/da.length).toFixed(1):null;
+  const locs=[...new Set(rec.map(r=>r.location).filter(Boolean))].join("、");
+
+  document.getElementById("modalTitle").textContent=name||"設備歷史故障單";
+  document.getElementById("modalMeta").innerHTML=[
+    `<span>📁 <strong>${esc(cat)}</strong></span>`,
+    `<span>🔧 <strong>${esc(sys)}</strong></span>`,
+    locs?`<span>📍 ${esc(locs.slice(0,60))}</span>`:"",
+  ].join("");
+  document.getElementById("modalKpi").innerHTML=`
+    <div class="mk-card"><div class="mk-num" style="color:var(--blue)">${rec.length}</div><div class="mk-lbl">歷史故障次數</div></div>
+    <div class="mk-card"><div class="mk-num" style="color:var(--red)">${rec.length-cl}</div><div class="mk-lbl">待結案</div></div>
+    <div class="mk-card"><div class="mk-num" style="color:var(--green-d)">${cl}</div><div class="mk-lbl">已結案</div></div>
+    <div class="mk-card"><div class="mk-num" style="color:var(--amber-d)">${avg??"—"}</div><div class="mk-lbl">平均修復天數</div></div>`;
+
+  const tbody=document.getElementById("modalBody"),empty=document.getElementById("modalEmpty");
+  if(rec.length===0){tbody.innerHTML="";empty.style.display="";}
+  else{
+    empty.style.display="none";
+    tbody.innerHTML=rec.map((r,i)=>{
+      const big=r.severity==="大故障",done=r.closed==="V"||r.closed==="O";
+      const d=calcDays(r.notifyTime,r.fixTime);
+      const dc=d===null?"":d<=3?"color:var(--green-d)":d<=14?"color:var(--amber-d)":"color:var(--red)";
+      return `<tr style="${i%2?"background:rgba(0,0,0,.014)":""}">
+        <td class="mono" style="white-space:nowrap">${esc(r.caseNo||"不開單")}</td>
+        <td style="white-space:nowrap;font-size:11px">${esc(r.notifyTime||"—")}</td>
+        <td style="white-space:nowrap;font-size:11px;color:var(--txt2)">${esc(r.fixTime||"—")}</td>
+        <td style="text-align:center;font-size:11px;${dc}">${d!==null?d+"天":"—"}</td>
+        <td><span class="chip ${big?"chip-red":"chip-amber"}">${esc(r.severity||"小故障")}</span></td>
+        <td style="text-align:center">${done?`<span style="color:var(--green-d);font-weight:700">✓</span>`:`<span style="color:var(--amber-d)">…</span>`}</td>
+        <td style="font-size:11px;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.location||"—")}</td>
+        <td style="font-size:11px;color:var(--txt2);max-width:200px;word-break:break-all">${esc((r.description||"—").slice(0,80))}</td>
+      </tr>`;
+    }).join("");
+  }
+  document.getElementById("modalOverlay").classList.add("open");
+  document.body.style.overflow="hidden";
+}
+function closeModal(){document.getElementById("modalOverlay").classList.remove("open");document.body.style.overflow="";}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal();});
+
+// ── 設定面板開關 ──
+function toggleConfig(){
+  document.getElementById("cfgBody").classList.toggle("open");
+  document.getElementById("cfgToggle").classList.toggle("open");
+}
+
+// ── 複製程式碼 ──
+function copyCode(){
+  const txt=document.getElementById("scriptCode").textContent;
+  navigator.clipboard.writeText(txt).then(()=>{
+    const btn=event.target;btn.textContent="✓ 已複製";
+    setTimeout(()=>{btn.textContent="複製程式碼";},2000);
+  });
+}
+
+// ── 初始化 ──
+document.addEventListener("DOMContentLoaded",()=>{restore();});
+</script>
+</body>
+</html>
