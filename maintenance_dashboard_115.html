@@ -757,15 +757,45 @@ document.addEventListener('change', function(e) {
 <!-- Firebase SDK (ESM via CDN) -->
 <script>
 // Firebase SDK 動態載入（避免 type="module" 作用域問題）
+// ══════════════════════════════════════════════════════════
+//  Firebase SDK 動態載入（帶重試）
+// ══════════════════════════════════════════════════════════
 let _firebaseApp = null, _firebaseDb = null;
+let _fbSDK = null;
+let _sdkLoading = null; // Promise，避免重複載入
 
 async function _loadFirebaseSDK() {
-  const { initializeApp, deleteApp, getApps } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js");
-  const { getFirestore, collection, getDocs, query } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
-  return { initializeApp, deleteApp, getApps, getFirestore, collection, getDocs, query };
+  // 若已在載入中，等待同一個 Promise 避免競態
+  if (_sdkLoading) return _sdkLoading;
+  _sdkLoading = (async () => {
+    let lastErr;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const [appMod, fseMod] = await Promise.all([
+          import("https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js"),
+          import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js"),
+        ]);
+        return {
+          initializeApp:  appMod.initializeApp,
+          deleteApp:      appMod.deleteApp,
+          getApps:        appMod.getApps,
+          getFirestore:   fseMod.getFirestore,
+          collection:     fseMod.collection,
+          getDocs:        fseMod.getDocs,
+          query:          fseMod.query,
+          doc:            fseMod.doc,
+          updateDoc:      fseMod.updateDoc,
+        };
+      } catch(e) {
+        lastErr = e;
+        console.warn(`Firebase SDK 載入失敗 (嘗試 ${attempt}/3)：`, e.message);
+        if (attempt < 3) await new Promise(r => setTimeout(r, 800 * attempt));
+      }
+    }
+    throw lastErr;
+  })();
+  return _sdkLoading;
 }
-
-let _fbSDK = null; // 快取 SDK，避免重複 import
 
 // ═══════════════════════════════════════════════════════
 //  Firestore 欄位對應
@@ -820,6 +850,9 @@ async function fetchDeviceListFromFirebase() {
     console.log("✨ device_list 從快取載入");
     return JSON.parse(cached);
   }
+  // 確保 SDK 和 DB 已就緒
+  if (!_fbSDK)      _fbSDK      = await _loadFirebaseSDK();
+  if (!_firebaseDb) _firebaseDb = (await initFirebase(JSON.parse(localStorage.getItem(LS_KEY)||"{}")));
   const { collection, getDocs, query } = _fbSDK;
   const snap    = await getDocs(query(collection(_firebaseDb, "device_list")));
   const devices = snap.docs.map(d => ({ _docId: d.id, ...d.data() }));
@@ -1222,7 +1255,11 @@ function restoreConf() {
 
 // ── Firebase 初始化 ───────────────────────────
 async function initFirebase(cfg) {
-  if (!_fbSDK) _fbSDK = await _loadFirebaseSDK();
+  // 確保 SDK 完整載入
+  if (!_fbSDK) {
+    document.getElementById("loadingSub").textContent = "載入 Firebase SDK…";
+    _fbSDK = await _loadFirebaseSDK();
+  }
   const { initializeApp, deleteApp } = _fbSDK;
   // 若已有 app 先刪除再重建
   if (_firebaseApp) {
@@ -1237,6 +1274,7 @@ async function initFirebase(cfg) {
     appId:             cfg.appId,
   }, "mainApp_" + Date.now());
   _firebaseDb = _fbSDK.getFirestore(_firebaseApp);
+  console.log("✅ Firebase 初始化完成，Project:", cfg.projectId);
   return _firebaseDb;
 }
 
@@ -1297,30 +1335,46 @@ _fn.saveAndConnect = saveAndConnect;
 async function loadFromFirebase() {
   const cfg = JSON.parse(localStorage.getItem(LS_KEY) || "{}");
   if (!cfg.apiKey || !cfg.projectId) {
-    showPage("settings", document.querySelector('[onclick*="settings"]'));
+    const sNav = document.querySelector('[data-page="settings"]');
+    showPage("settings", sNav);
+    if (sNav) sNav.classList.add("active");
     setDot("error", "❌ 請先填入 Firebase 設定");
     return;
   }
 
-  // 若 db 尚未初始化
-  if (!_firebaseDb) await initFirebase(cfg);
-
-  showLoad("正在連接 Firebase Firestore…", `集合：${cfg.collection || "fault_records"}`);
+  showLoad("正在連接 Firebase Firestore…", "初始化 SDK…");
   setDot("loading", "載入中…");
 
   try {
-    setProgress(20);
-    document.getElementById("loadingSub").textContent = "讀取 fault_records 集合…";
+    // ① 確保 SDK 已載入
+    if (!_fbSDK) {
+      document.getElementById("loadingSub").textContent = "載入 Firebase SDK…";
+      _fbSDK = await _loadFirebaseSDK();
+    }
+    setProgress(10);
 
+    // ② 確保 Firebase app 已初始化
+    if (!_firebaseDb) {
+      document.getElementById("loadingSub").textContent = "初始化 Firebase…";
+      await initFirebase(cfg);
+    }
+    setProgress(20);
+
+    document.getElementById("loadingSub").textContent = `讀取 ${cfg.collection || "fault_records"} 集合…`;
     const rawDocs = await fetchFaultRecordsFromFirebase();
     setProgress(70);
 
+    // ③ 記錄抽樣方便除錯
+    console.log(`📦 Firestore 回傳 ${rawDocs.length} 筆，第一筆欄位：`,
+      rawDocs[0] ? Object.keys(rawDocs[0]).join(", ") : "（無資料）");
+
     document.getElementById("loadingSub").textContent = `解析 ${rawDocs.length} 筆資料…`;
-    const all = rawDocs.map(normalizeRecord).filter(r => r.caseNo || r.deviceName);
+
+    // ④ 移除過嚴的 filter，全部解析
+    const all = rawDocs.map(normalizeRecord);
     setProgress(90);
 
     RAW = all;
-
     const now = new Date();
     const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")} ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
 
@@ -1328,25 +1382,34 @@ async function loadFromFirebase() {
     document.getElementById("footerTxt").textContent = `資料來源：Firebase Firestore → ${cfg.collection || "fault_records"}｜共 ${RAW.length} 筆｜更新：${ts}`;
     document.getElementById("navBadge").textContent = RAW.length.toLocaleString();
 
-    // 初始化下拉選單
-    selSheet="ALL"; selSys="ALL"; selCat="ALL"; detPage=1;
+    selSheet="ALL"; selSys="ALL"; selCat="ALL"; selDevCat="ALL"; detPage=1;
     updSheetOpts(); updSysOpts(); updCatOpts(); updDetFilters();
     renderAll();
 
-    // 同步載入設備清單（不阻塞主流程，背景執行）
+    // 背景載入設備清單
     initDeviceList().catch(e => console.warn("設備清單背景載入失敗：", e));
 
     hideLoad();
-    console.log(`✅ 成功從 Firebase 載入 ${RAW.length} 筆歷史資料`);
+    console.log(`✅ 成功載入 ${RAW.length} 筆資料`);
 
   } catch (err) {
     hideLoad();
+    _sdkLoading = null;  // 重置，允許下次重試
+    _fbSDK      = null;
+    _firebaseDb = null;
     setDot("error", "❌ 連接失敗：" + err.message);
     console.error("Firebase 載入失敗：", err);
-    alert("Firebase 載入失敗：\n" + err.message + "\n\n請確認 Firebase 設定正確，且 Firestore 安全規則允許讀取。");
+    alert(`Firebase 載入失敗：
+${err.message}
+
+可能原因：
+1. Firebase 設定有誤
+2. Firestore 安全規則不允許讀取
+3. 網路問題，請稍後重試`);
   }
 }
 _fn.loadFromFirebase = loadFromFirebase;
+
 
 function setAutoRefresh() {
   const min = parseInt(document.getElementById("autoSel").value);
@@ -1939,10 +2002,22 @@ _fn.closeModal = closeModal;
 document.addEventListener("keydown", e => { if(e.key==="Escape") closeModal(); });
 
 // ── 初始化 ────────────────────────────────────
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   const cfg = restoreConf();
+
   if (cfg.apiKey && cfg.projectId) {
-    initFirebase(cfg).then(() => loadFromFirebase());
+    try {
+      // 提前預載 SDK（非阻塞顯示，但確保後續操作就緒）
+      showLoad("正在準備 Firebase…", "載入 SDK…");
+      _fbSDK = await _loadFirebaseSDK();
+      await initFirebase(cfg);
+      await loadFromFirebase();
+    } catch(e) {
+      hideLoad();
+      _sdkLoading = null; _fbSDK = null; _firebaseDb = null;
+      setDot("error", "❌ 初始化失敗：" + e.message);
+      console.error("初始化失敗：", e);
+    }
   } else {
     // 引導到設定頁
     const settingsNav = document.querySelector('[data-page="settings"]');
