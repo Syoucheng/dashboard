@@ -212,6 +212,17 @@ tbody tr.top-row{background:rgba(47,109,224,.05)}
   .line-full{grid-column:unset}
   .modal-kpi{grid-template-columns:repeat(2,1fr)}
 }
+/* ── 設備清單管理 ── */
+.dl-edit-input{width:100%;font-size:12px;padding:4px 8px;border:1.5px solid var(--blue);border-radius:4px;background:#fff;color:var(--txt1);font-family:inherit;outline:none}
+.dl-edit-input:focus{box-shadow:0 0 0 3px rgba(47,109,224,.12)}
+.save-row-btn{font-size:11px;padding:3px 10px;border-radius:4px;border:1px solid var(--green);background:var(--green-l);color:var(--green-d);cursor:pointer;white-space:nowrap;font-weight:600}
+.save-row-btn:hover{background:var(--green);color:#fff}
+.cancel-row-btn{font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border2);background:var(--bg2);color:var(--txt2);cursor:pointer}
+.edit-row-btn{font-size:11px;padding:3px 10px;border-radius:4px;border:1px solid var(--border2);background:var(--bg2);color:var(--txt2);cursor:pointer}
+.edit-row-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-l)}
+.saving-indicator{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--amber-d);animation:pulse 1s infinite}
+.saved-indicator{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--green-d)}
+
 </style>
 </head>
 <body>
@@ -251,6 +262,10 @@ tbody tr.top-row{background:rgba(47,109,224,.05)}
         <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
         <span class="nav-item-text">故障事件明細</span>
       </div>
+      <div class="nav-item" data-action="showPage" data-page="devicelist">
+        <svg viewBox="0 0 24 24"><path d="M22 9V7h-2V5c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-2h2v-2h-2v-2h2v-2h-2V9h2zm-4 10H4V5h14v14z"/></svg>
+        <span class="nav-item-text">設備清單管理</span>
+      </div>
     </div>
 
     <div class="nav-section">
@@ -266,10 +281,6 @@ tbody tr.top-row{background:rgba(47,109,224,.05)}
       <div class="nav-item" style="opacity:.4;cursor:default">
         <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
         <span class="nav-item-text">報表匯出（即將推出）</span>
-      </div>
-      <div class="nav-item" style="opacity:.4;cursor:default">
-        <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
-        <span class="nav-item-text">異常通報（即將推出）</span>
       </div>
     </div>
 
@@ -310,8 +321,10 @@ tbody tr.top-row{background:rgba(47,109,224,.05)}
           <select id="selSheet"><option value="ALL">全部來源</option></select>
           <label>系統</label>
           <select id="selSys"><option value="ALL">全部系統</option></select>
+          <label>設備總類</label>
+          <select id="selCat"><option value="ALL">全部設備總類</option></select>
           <label>設備種類</label>
-          <select id="selCat"><option value="ALL">全部設備種類</option></select>
+          <select id="selDevCat"><option value="ALL">全部設備種類</option></select>
           <button class="btn btn-ghost btn-sm" id="btnReset" data-action="resetAll" style="display:none">✕ 清除</button>
           <div class="filter-count">篩選結果：<strong id="filterCount">—</strong> 筆</div>
         </div>
@@ -326,13 +339,39 @@ tbody tr.top-row{background:rgba(47,109,224,.05)}
 
         <div class="chart-grid">
           <div class="chart-card">
-            <div class="chart-title"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>故障系統分佈</div>
+            <div class="chart-title">
+              <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
+              故障系統分佈
+              <button onclick="toggleChartExclude('pie')" style="margin-left:auto;font-size:11px;padding:2px 8px;border:1px solid var(--border2);border-radius:4px;background:var(--bg2);color:var(--txt2);cursor:pointer" id="pieExcludeBtn">⚙ 篩選</button>
+            </div>
+            <!-- 圓餅圖排除清單 -->
+            <div id="pieExcludePanel" style="display:none;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:8px;max-height:130px;overflow-y:auto">
+              <div style="font-size:11px;color:var(--txt3);margin-bottom:6px;display:flex;justify-content:space-between">
+                <span>勾選要顯示的系統（取消勾選即排除）</span>
+                <span onclick="toggleAllPie(true)" style="color:var(--blue-d);cursor:pointer;font-weight:500">全選</span>
+                <span onclick="toggleAllPie(false)" style="color:var(--red);cursor:pointer;font-weight:500">全取消</span>
+              </div>
+              <div id="pieExcludeList" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+            </div>
             <div class="legend-wrap" id="pieLegend"></div>
-            <div style="position:relative;height:220px"><canvas id="pieChart"></canvas></div>
+            <div style="position:relative;height:200px"><canvas id="pieChart"></canvas></div>
           </div>
           <div class="chart-card">
-            <div class="chart-title"><svg viewBox="0 0 24 24"><path d="M5 9.2h3V19H5V9.2zM10.6 5h2.8v14h-2.8V5zm5.6 8H19v6h-2.8v-6z"/></svg>設備種類故障 Top 10</div>
-            <div style="position:relative;height:250px"><canvas id="barChart"></canvas></div>
+            <div class="chart-title">
+              <svg viewBox="0 0 24 24"><path d="M5 9.2h3V19H5V9.2zM10.6 5h2.8v14h-2.8V5zm5.6 8H19v6h-2.8v-6z"/></svg>
+              設備種類故障 Top 10
+              <button onclick="toggleChartExclude('bar')" style="margin-left:auto;font-size:11px;padding:2px 8px;border:1px solid var(--border2);border-radius:4px;background:var(--bg2);color:var(--txt2);cursor:pointer" id="barExcludeBtn">⚙ 篩選</button>
+            </div>
+            <!-- 長條圖排除清單 -->
+            <div id="barExcludePanel" style="display:none;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:8px;max-height:130px;overflow-y:auto">
+              <div style="font-size:11px;color:var(--txt3);margin-bottom:6px;display:flex;justify-content:space-between">
+                <span>勾選要顯示的設備種類（取消勾選即排除）</span>
+                <span onclick="toggleAllBar(true)" style="color:var(--blue-d);cursor:pointer;font-weight:500">全選</span>
+                <span onclick="toggleAllBar(false)" style="color:var(--red);cursor:pointer;font-weight:500">全取消</span>
+              </div>
+              <div id="barExcludeList" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+            </div>
+            <div style="position:relative;height:230px"><canvas id="barChart"></canvas></div>
           </div>
           <div class="chart-card line-full">
             <div class="chart-title"><svg viewBox="0 0 24 24"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z"/></svg>月別故障件數趨勢</div>
@@ -352,9 +391,10 @@ tbody tr.top-row{background:rgba(47,109,224,.05)}
           </div>
           <div class="tbl-toolbar">
             <input type="text" id="devSearch" placeholder="🔍 搜尋設備名稱…"/>
-            <select id="devFilterCat"><option value="ALL">全部設備種類</option></select>
+            <select id="devFilterSrc"><option value="ALL">全部來源</option><option value="E">機電（E）</option><option value="T">交控（T）</option></select>
             <select id="devFilterSys"><option value="ALL">全部系統</option></select>
-            <select id="devFilterSrc"><option value="ALL">全部來源</option><option value="E">機電系統（E）</option><option value="T">交控系統（T）</option></select>
+            <select id="devFilterCat"><option value="ALL">全部設備總類</option></select>
+            <select id="devFilterDevCat"><option value="ALL">全部設備種類</option></select>
             <label style="font-size:13px;color:var(--txt2)">隱藏 ≤</label>
             <input type="number" id="devMinFaults" value="0" min="0" style="width:52px;font-size:13px;padding:4px 6px;border:1px solid var(--border2);border-radius:var(--radius-sm)"/>
             <label style="font-size:13px;color:var(--txt2)">次</label>
@@ -391,6 +431,8 @@ tbody tr.top-row{background:rgba(47,109,224,.05)}
             <input type="text" id="detSearch" placeholder="🔍 搜尋故障單號 / 設備名稱 / 位置…"/>
             <select id="detFilterSrc"><option value="ALL">全部來源</option><option value="E">機電（E）</option><option value="T">交控（T）</option></select>
             <select id="detFilterSys"><option value="ALL">全部系統</option></select>
+            <select id="detFilterCat"><option value="ALL">全部設備總類</option></select>
+            <select id="detFilterDevCat"><option value="ALL">全部設備種類</option></select>
             <select id="detFilterSev"><option value="ALL">全部等級</option><option value="大故障">大故障</option><option value="小故障">小故障</option></select>
             <select id="detFilterDone"><option value="ALL">全部狀態</option><option value="done">已結案</option><option value="open">待結案</option></select>
             <button class="btn btn-ghost btn-sm" data-action="clearDetFilters">✕ 清除</button>
@@ -401,8 +443,9 @@ tbody tr.top-row{background:rgba(47,109,224,.05)}
                 <th class="sortable" data-det-sort="caseNo">故障單號<span class="sort-icon" id="dsrt-caseNo">⇅</span></th>
                 <th class="sortable" data-det-sort="notifyTime">通報時間<span class="sort-icon active" id="dsrt-notifyTime">▼</span></th>
                 <th>來源</th><th>系統</th>
-                <th>設備種類</th><th>設備名稱</th><th>位置</th>
+                <th>設備總類</th><th>設備種類</th><th>設備名稱</th><th>位置</th>
                 <th>等級</th><th style="text-align:center">結案</th>
+                <th>故障說明</th><th>維修處理措施</th>
               </tr></thead>
               <tbody id="detailBody"><tr><td colspan="9" style="text-align:center;padding:3rem;color:var(--txt3)">載入資料後顯示</td></tr></tbody>
             </table>
@@ -411,7 +454,58 @@ tbody tr.top-row{background:rgba(47,109,224,.05)}
         </div>
       </div>
 
-      <!-- ══ Firebase 設定 ══ -->
+      <!-- ══ 設備清單管理 ══ -->
+      <div class="page" id="page-devicelist">
+        <div class="section-card" style="height:calc(100vh - 110px);display:flex;flex-direction:column">
+          <div class="section-head">
+            <svg viewBox="0 0 24 24"><path d="M22 9V7h-2V5c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-2h2v-2h-2v-2h2v-2h-2V9h2zm-4 10H4V5h14v14z"/></svg>
+            <h2>設備清單管理</h2>
+            <span class="hint">— 點擊「編輯」修改欄位，儲存後即回寫 Firebase</span>
+            <div class="ml-auto" style="display:flex;align-items:center;gap:8px">
+              <span id="dlCacheInfo" style="font-size:11px;color:var(--txt3)">—</span>
+              <button class="btn btn-ghost btn-sm" data-action="refreshDeviceList">
+                <svg style="width:12px;height:12px;fill:currentColor" viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                重新整理
+              </button>
+              <span class="badge badge-blue" id="dlCount">—</span>
+            </div>
+          </div>
+          <!-- 設備清單篩選列 -->
+          <div class="tbl-toolbar" style="flex-shrink:0">
+            <input type="text" id="dlSearch" placeholder="🔍 搜尋設備編號 / 種類 / 系統…"/>
+            <select id="dlFilterSrc">
+              <option value="ALL">全部來源</option>
+              <option value="E">機電（E）</option>
+              <option value="T">交控（T）</option>
+            </select>
+            <select id="dlFilterSysName"><option value="ALL">全部子系統</option></select>
+            <select id="dlFilterCat"><option value="ALL">全部設備種類</option></select>
+            <button class="btn btn-ghost btn-sm" data-action="clearDlFilters">✕ 清除</button>
+            <span class="ml-auto" style="font-size:12px;color:var(--txt3)" id="dlShowing">—</span>
+          </div>
+          <!-- 表格 -->
+          <div class="tbl-wrap" style="flex:1;overflow-x:auto;overflow-y:auto">
+            <table id="dlTable">
+              <thead><tr>
+                <th style="width:36px;text-align:center">#</th>
+                <th class="sortable" data-dl-sort="systemCode">來源<span class="sort-icon" id="dlsrt-systemCode">⇅</span></th>
+                <th class="sortable" data-dl-sort="systemName">子系統<span class="sort-icon" id="dlsrt-systemName">⇅</span></th>
+                <th class="sortable" data-dl-sort="deviceCat">設備總類<span class="sort-icon" id="dlsrt-deviceCat">⇅</span></th>
+                <th class="sortable" data-dl-sort="deviceCode">設備編號<span class="sort-icon" id="dlsrt-deviceCode">⇅</span></th>
+                <th class="sortable" data-dl-sort="deviceLocation">位置里程<span class="sort-icon" id="dlsrt-deviceLocation">⇅</span></th>
+                <th style="width:110px;text-align:center">操作</th>
+              </tr></thead>
+              <tbody id="dlBody">
+                <tr><td colspan="7" style="text-align:center;padding:3rem;color:var(--txt3)">請先連接 Firebase 並載入資料</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <!-- 分頁 -->
+          <div class="pager" id="dlPager" style="flex-shrink:0"></div>
+        </div>
+      </div>
+
+            <!-- ══ Firebase 設定 ══ -->
       <div class="page" id="page-settings">
         <div class="cfg-card">
           <div class="cfg-head">
@@ -490,6 +584,45 @@ tbody tr.top-row{background:rgba(47,109,224,.05)}
   </div>
 </div>
 
+<!-- ══ 設備編輯彈窗 ══ -->
+<div id="dlEditOverlay" style="display:none;position:fixed;inset:0;background:rgba(10,20,50,.5);z-index:600;align-items:center;justify-content:center;backdrop-filter:blur(3px)" onclick="if(event.target===this)closeDlEdit()">
+  <div style="width:min(560px,96vw);background:var(--bg1);border-radius:var(--radius);box-shadow:0 12px 48px rgba(0,0,0,.22);display:flex;flex-direction:column;animation:popIn .2s ease;overflow:hidden">
+    <div style="padding:14px 18px;border-bottom:1px solid var(--border);background:var(--bg2)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <svg style="width:20px;height:20px;fill:var(--blue);flex-shrink:0" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+        <h3 id="dlEditTitle" style="font-size:15px;font-weight:700;color:var(--txt1);flex:1">編輯設備資料</h3>
+        <button onclick="closeDlEdit()" style="width:30px;height:30px;border-radius:6px;border:1px solid var(--border2);background:var(--bg1);cursor:pointer;font-size:18px;color:var(--txt2);display:flex;align-items:center;justify-content:center;transition:all .15s" onmouseover="this.style.background='var(--red-l)';this.style.color='var(--red)'" onmouseout="this.style.background='var(--bg1)';this.style.color='var(--txt2)'">✕</button>
+      </div>
+      <div style="font-size:11px;color:var(--txt3);font-family:Consolas,monospace" id="dlEditDocId"></div>
+    </div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <label style="font-size:12px;font-weight:600;color:var(--txt2);display:block;margin-bottom:5px">子系統</label>
+          <input type="text" id="dledit-modal-systemName" style="width:100%;font-size:13px;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg2);color:var(--txt1);font-family:inherit"/>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:var(--txt2);display:block;margin-bottom:5px">設備總類</label>
+          <input type="text" id="dledit-modal-deviceCat" style="width:100%;font-size:13px;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg2);color:var(--txt1);font-family:inherit"/>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:var(--txt2);display:block;margin-bottom:5px">設備編號</label>
+          <input type="text" id="dledit-modal-deviceCode" style="width:100%;font-size:13px;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg2);color:var(--txt1);font-family:Consolas,monospace"/>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:var(--txt2);display:block;margin-bottom:5px">位置里程</label>
+          <input type="text" id="dledit-modal-deviceLocation" style="width:100%;font-size:13px;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg2);color:var(--txt1);font-family:inherit"/>
+        </div>
+      </div>
+      <div id="dlEditStatus" style="font-size:12px;min-height:20px;padding:0 2px"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:12px;border-top:1px solid var(--border)">
+        <button onclick="closeDlEdit()" style="font-size:13px;padding:7px 16px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg2);color:var(--txt2);cursor:pointer">取消</button>
+        <button onclick="saveDlEditModal()" id="dlEditSaveBtn" style="font-size:13px;padding:7px 20px;border:1px solid var(--green);border-radius:var(--radius-sm);background:var(--green);color:#fff;cursor:pointer;font-weight:600">💾 儲存到 Firebase</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- 設備歷史故障單 彈窗 -->
 <div class="modal-overlay" id="modalOverlay" data-action="closeModalOverlay">
   <div class="modal">
@@ -505,10 +638,10 @@ tbody tr.top-row{background:rgba(47,109,224,.05)}
     <div class="modal-body">
       <table>
         <thead><tr>
-          <th>故障單號</th><th>通報時間</th><th>修護完成</th>
-          <th style="text-align:center">修復天數</th>
+          <th>故障單號</th><th>通報時間</th>
           <th>等級</th><th style="text-align:center">結案</th>
           <th>位置</th><th>故障說明</th>
+          <th>維修處理措施</th><th>更換設備</th><th>型號規格</th>
         </tr></thead>
         <tbody id="modalBody"></tbody>
       </table>
@@ -524,6 +657,14 @@ const _fn = {};
 
 // 用事件委派統一處理所有點擊
 document.addEventListener('click', function(e) {
+  // ✏️ 設備清單編輯按鈕（data-docid 方式，避免特殊字元問題）
+  const editBtn = e.target.closest('.dl-edit-trigger');
+  if (editBtn) {
+    const docId = editBtn.dataset.docid;
+    if (docId && _fn.startEditDl) _fn.startEditDl(docId);
+    return;
+  }
+
   // data-action 處理
   const actionEl = e.target.closest('[data-action]');
   if (actionEl) {
@@ -540,6 +681,8 @@ document.addEventListener('click', function(e) {
       case 'closeModalOverlay':
         if (e.target === actionEl) { _fn.closeModal && _fn.closeModal(); }
         break;
+      case 'refreshDeviceList': _fn.refreshDeviceList && _fn.refreshDeviceList(); break;
+      case 'clearDlFilters':    _fn.clearDlFilters    && _fn.clearDlFilters();    break;
       case 'exportConfig':      _fn.exportConfig && _fn.exportConfig(); break;
       case 'clearConfig':       _fn.clearConfig  && _fn.clearConfig();  break;
     }
@@ -557,6 +700,12 @@ document.addEventListener('click', function(e) {
     _fn.detSort && _fn.detSort(detSortEl.dataset.detSort);
     return;
   }
+  // data-dl-sort：設備清單排序
+  const dlSortEl = e.target.closest('[data-dl-sort]');
+  if (dlSortEl) {
+    _fn.dlSortBy && _fn.dlSortBy(dlSortEl.dataset.dlSort);
+    return;
+  }
 });
 
 // 用事件委派處理所有 select/input 變更
@@ -566,14 +715,23 @@ document.addEventListener('change', function(e) {
     case 'selSheet':      _fn.onSheetChange && _fn.onSheetChange(e.target.value); break;
     case 'selSys':        _fn.onSysChange   && _fn.onSysChange(e.target.value);   break;
     case 'selCat':        _fn.onCatChange   && _fn.onCatChange(e.target.value);   break;
+    case 'selDevCat':     _fn.onDevCatChange && _fn.onDevCatChange(e.target.value); break;
     case 'autoSel':       _fn.setAutoRefresh && _fn.setAutoRefresh();              break;
     case 'devFilterCat':
-    case 'devFilterSys':
-    case 'devFilterSrc':  _fn.renderDevBody && _fn.renderDevBody(); break;
-    case 'detFilterSrc':
-    case 'detFilterSys':
+    case 'devFilterDevCat': _fn.renderDevBody && _fn.renderDevBody(); break;
+    case 'devFilterSys':    _fn.onDevSysChange && _fn.onDevSysChange(e.target.value); break;
+    case 'devFilterSrc':    _fn.onDevSrcChange && _fn.onDevSrcChange(e.target.value); break;
+    case 'detFilterSrc':    _fn.onDetSrcChange && _fn.onDetSrcChange(e.target.value); break;
+    case 'detFilterSys':    _fn.onDetSysChange && _fn.onDetSysChange(e.target.value); break;
+    case 'detFilterCat':
+    case 'detFilterDevCat':
     case 'detFilterSev':
     case 'detFilterDone': if(_fn.detPageReset) _fn.detPageReset(); _fn.renderDetail && _fn.renderDetail(); break;
+    // 設備清單篩選
+    case 'dlFilterSrc':
+    case 'dlFilterSrc':     _fn.onDlSrcChange  && _fn.onDlSrcChange(e.target.value);  break;
+    case 'dlFilterSysName': _fn.onDlSysNameChange && _fn.onDlSysNameChange(e.target.value); break;
+    case 'dlFilterCat': _fn.renderDlBody && _fn.renderDlBody(); break;
   }
 });
 
@@ -583,6 +741,7 @@ document.addEventListener('input', function(e) {
     case 'devSearch':
     case 'devMinFaults':  _fn.renderDevBody && _fn.renderDevBody(); break;
     case 'detSearch':     if(_fn.detPageReset) _fn.detPageReset(); _fn.renderDetail && _fn.renderDetail(); break;
+    case 'dlSearch':      _fn.renderDlBody && _fn.renderDlBody(); break;
   }
 });
 
@@ -638,6 +797,241 @@ const SRC_MAP = {
 };
 
 const PAL = ["#2f6de0","#18a070","#e8960a","#d4537e","#7f77dd","#d85a30","#0f6e56","#854f0b","#c0302a","#185fa5","#3b6d11","#4b1528"];
+
+// ══════════════════════════════════════════════════════════
+//  device_list：快取撈取 + 設備清單管理（查看／編輯／回寫 Firebase）
+// ══════════════════════════════════════════════════════════
+const DL_CACHE_KEY = "cached_device_list";
+const DL_TIME_KEY  = "device_list_timestamp";
+const DL_EXPIRE_MS = 60 * 60 * 1000; // 快取 1 小時
+let DEVICE_LIST     = [];   // 全量設備清單
+let DL_SORTED       = [];   // 排序後清單
+let dlSortCol       = "systemCode";
+let dlSortDir       = "asc";
+let dlPage          = 1;
+const DL_PAGE_SIZE  = 30;
+
+// ── 撈取設備總表（帶快取）──────────────────────────────
+async function fetchDeviceListFromFirebase() {
+  const cached   = localStorage.getItem(DL_CACHE_KEY);
+  const cachedTs = localStorage.getItem(DL_TIME_KEY);
+  const now = Date.now();
+  if (cached && cachedTs && (now - Number(cachedTs) < DL_EXPIRE_MS)) {
+    console.log("✨ device_list 從快取載入");
+    return JSON.parse(cached);
+  }
+  const { collection, getDocs, query } = _fbSDK;
+  const snap    = await getDocs(query(collection(_firebaseDb, "device_list")));
+  const devices = snap.docs.map(d => ({ _docId: d.id, ...d.data() }));
+  localStorage.setItem(DL_CACHE_KEY, JSON.stringify(devices));
+  localStorage.setItem(DL_TIME_KEY,  String(now));
+  console.log(`🚀 device_list 從 Firebase 同步 ${devices.length} 筆`);
+  return devices;
+}
+
+// 強制重新整理（清快取）
+async function refreshDeviceList() {
+  localStorage.removeItem(DL_CACHE_KEY);
+  localStorage.removeItem(DL_TIME_KEY);
+  await initDeviceList();
+}
+_fn.refreshDeviceList = refreshDeviceList;
+
+// ── 初始化（載入後呼叫）────────────────────────────────
+async function initDeviceList() {
+  try {
+    DEVICE_LIST = await fetchDeviceListFromFirebase();
+    // 更新篩選器選項
+    updDlFilterOpts();
+    buildAndRenderDl();
+    // 更新右上角資訊
+    const cached = localStorage.getItem(DL_TIME_KEY);
+    const ts = cached ? new Date(Number(cached)).toLocaleString("zh-TW",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}) : "";
+    const info = document.getElementById("dlCacheInfo");
+    if (info) info.textContent = ts ? `快取：${ts}` : "";
+  } catch(e) { console.warn("device_list 載入失敗：", e); }
+}
+
+// 更新篩選器下拉選單
+function updDlFilterOpts() {
+  const sysNames = [...new Set(DEVICE_LIST.map(d=>d.systemName).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"zh"));
+  const cats     = [...new Set(DEVICE_LIST.map(d=>d.deviceCat ).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"zh"));
+  const snSel = document.getElementById("dlFilterSysName");
+  const catSel= document.getElementById("dlFilterCat");
+  if (snSel)  snSel.innerHTML  = `<option value="ALL">全部子系統</option>` + sysNames.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join("");
+  if (catSel) catSel.innerHTML = `<option value="ALL">全部設備種類</option>` + cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
+}
+
+function clearDlFilters() {
+  const ids = ["dlSearch","dlFilterSrc","dlFilterSysName","dlFilterCat"];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = el.tagName === "INPUT" ? "" : "ALL";
+  });
+  dlPage = 1; buildAndRenderDl();
+}
+_fn.clearDlFilters = clearDlFilters;
+
+// ── 排序 ───────────────────────────────────────────────
+function dlSortBy(col) {
+  if (dlSortCol === col) dlSortDir = dlSortDir === "asc" ? "desc" : "asc";
+  else { dlSortCol = col; dlSortDir = "asc"; }
+  // 更新排序 icon
+  ["systemCode","systemName","deviceCat","deviceCode","deviceLocation"].forEach(c => {
+    const el = document.getElementById("dlsrt-" + c);
+    if (!el) return;
+    if (c === dlSortCol) { el.textContent = dlSortDir === "asc" ? " ▲" : " ▼"; el.classList.add("active"); }
+    else { el.textContent = " ⇅"; el.classList.remove("active"); }
+  });
+  dlPage = 1; buildAndRenderDl();
+}
+_fn.dlSortBy = dlSortBy;
+
+// ── 過濾 + 排序 + 渲染 ─────────────────────────────────
+function getFilteredDl() {
+  const search  = (document.getElementById("dlSearch")        ?.value || "").toLowerCase();
+  const srcF    = (document.getElementById("dlFilterSrc")     ?.value || "ALL");
+  const sysF    = (document.getElementById("dlFilterSysName") ?.value || "ALL");
+  const catF    = (document.getElementById("dlFilterCat")     ?.value || "ALL");
+
+  let data = DEVICE_LIST.filter(d => {
+    if (srcF !== "ALL" && d.systemCode !== srcF)   return false;
+    if (sysF !== "ALL" && d.systemName !== sysF)   return false;
+    if (catF !== "ALL" && d.deviceCat  !== catF)   return false;
+    if (search) {
+      const hay = ((d.deviceCode||"")+(d.deviceCat||"")+(d.systemName||"")+(d.deviceLocation||"")).toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+
+  data.sort((a, b) => {
+    const av = String(a[dlSortCol] || ""), bv = String(b[dlSortCol] || "");
+    return dlSortDir === "asc" ? av.localeCompare(bv,"zh") : bv.localeCompare(av,"zh");
+  });
+  return data;
+}
+
+function buildAndRenderDl() {
+  DL_SORTED = getFilteredDl();
+  document.getElementById("dlCount").textContent   = `${DEVICE_LIST.length} 筆`;
+  document.getElementById("dlShowing").textContent = `顯示 ${Math.min(DL_SORTED.length, dlPage*DL_PAGE_SIZE)} / ${DL_SORTED.length} 筆`;
+  renderDlBody();
+}
+_fn.renderDlBody = function() { dlPage = 1; buildAndRenderDl(); };
+
+function renderDlBody() {
+  const tp     = Math.max(1, Math.ceil(DL_SORTED.length / DL_PAGE_SIZE));
+  if (dlPage > tp) dlPage = 1;
+  const pageData = DL_SORTED.slice((dlPage-1)*DL_PAGE_SIZE, dlPage*DL_PAGE_SIZE);
+  const offset   = (dlPage-1)*DL_PAGE_SIZE;
+
+  const srcChip = code => code === "T"
+    ? `<span class="chip chip-green" style="font-size:11px">交控</span>`
+    : `<span class="chip chip-blue"  style="font-size:11px">機電</span>`;
+
+  const rows = pageData.map((dev, i) => {
+    const idx   = offset + i + 1;
+    const docId = dev._docId || dev.docId || (dev.systemCode + "_" + dev.deviceCode);
+    return `<tr id="dlrow-${esc(docId)}">
+      <td style="text-align:center;font-size:11px;color:var(--txt3)">${idx}</td>
+      <td>${srcChip(dev.systemCode)}</td>
+      <td style="font-size:13px">${esc(dev.systemName||"—")}</td>
+      <td style="font-size:13px">${esc(dev.deviceCat||"—")}</td>
+      <td style="font-family:Consolas,monospace;font-size:12px;color:var(--blue-d)">${esc(dev.deviceCode||"—")}</td>
+      <td style="font-size:12px;color:var(--txt2)">${esc(dev.deviceLocation||"—")}</td>
+      <td style="text-align:center">
+        <button class="edit-row-btn dl-edit-trigger" data-docid="${esc(docId)}">✏️ 編輯</button>
+      </td>
+    </tr>`;
+  }).join("");
+
+  document.getElementById("dlBody").innerHTML = rows ||
+    `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--txt3)">無符合條件之設備</td></tr>`;
+
+  // 分頁
+  let ph = `<button onclick="dlGoPage(${dlPage-1})" ${dlPage===1?"disabled":""}>‹</button>`;
+  const s=Math.max(1,Math.min(dlPage-3,tp-6)), e=Math.min(tp,s+6);
+  for (let p=s; p<=e; p++) ph+=`<button class="${p===dlPage?"active":""}" onclick="dlGoPage(${p})">${p}</button>`;
+  ph += `<button onclick="dlGoPage(${dlPage+1})" ${dlPage===tp?"disabled":""}>›</button>`;
+  ph += `<span class="pager-info">共 ${DL_SORTED.length} 筆 / 每頁 ${DL_PAGE_SIZE} 筆</span>`;
+  document.getElementById("dlPager").innerHTML = tp > 1 ? ph : "";
+}
+window.dlGoPage = function(p) {
+  const tp = Math.max(1, Math.ceil(DL_SORTED.length/DL_PAGE_SIZE));
+  dlPage = Math.max(1, Math.min(p, tp));
+  renderDlBody();
+};
+
+// ── 設備清單：彈窗編輯 ───────────────────────────────────
+let _dlEditDocId = null;
+
+function startEditDl(docId) {
+  const dev = DEVICE_LIST.find(d => (d._docId || d.docId || (d.systemCode+"_"+d.deviceCode)) === docId);
+  if (!dev) return;
+  _dlEditDocId = docId;
+  document.getElementById("dlEditTitle").textContent           = dev.deviceCode || "編輯設備資料";
+  document.getElementById("dlEditDocId").textContent           = "Document ID：" + docId;
+  document.getElementById("dledit-modal-systemName").value     = dev.systemName     || "";
+  document.getElementById("dledit-modal-deviceCat").value      = dev.deviceCat      || "";
+  document.getElementById("dledit-modal-deviceCode").value     = dev.deviceCode     || "";
+  document.getElementById("dledit-modal-deviceLocation").value = dev.deviceLocation || "";
+  document.getElementById("dlEditStatus").textContent          = "";
+  document.getElementById("dlEditSaveBtn").disabled            = false;
+  document.getElementById("dlEditSaveBtn").textContent         = "💾 儲存到 Firebase";
+  const overlay = document.getElementById("dlEditOverlay");
+  overlay.style.display = "flex";
+  document.body.style.overflow = "hidden";
+  setTimeout(() => document.getElementById("dledit-modal-systemName")?.focus(), 100);
+}
+window.startEditDl = startEditDl;
+_fn.startEditDl    = startEditDl;
+
+function closeDlEdit() {
+  document.getElementById("dlEditOverlay").style.display = "none";
+  document.body.style.overflow = "";
+  _dlEditDocId = null;
+}
+window.closeDlEdit = closeDlEdit;
+
+async function saveDlEditModal() {
+  if (!_dlEditDocId) return;
+  const dev = DEVICE_LIST.find(d => (d._docId || d.docId || (d.systemCode+"_"+d.deviceCode)) === _dlEditDocId);
+  if (!dev) return;
+  const newData = {
+    systemName:     document.getElementById("dledit-modal-systemName").value.trim(),
+    deviceCat:      document.getElementById("dledit-modal-deviceCat").value.trim(),
+    deviceCode:     document.getElementById("dledit-modal-deviceCode").value.trim(),
+    deviceLocation: document.getElementById("dledit-modal-deviceLocation").value.trim(),
+  };
+  const saveBtn  = document.getElementById("dlEditSaveBtn");
+  const statusEl = document.getElementById("dlEditStatus");
+  saveBtn.disabled = true;
+  saveBtn.textContent = "⟳ 儲存中…";
+  statusEl.style.color = "var(--amber-d)";
+  statusEl.textContent = "正在寫入 Firebase…";
+  try {
+    const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
+    const docRef = doc(_firebaseDb, "device_list", _dlEditDocId);
+    await updateDoc(docRef, newData);
+    Object.assign(dev, newData);
+    localStorage.setItem(DL_CACHE_KEY, JSON.stringify(DEVICE_LIST));
+    updDlFilterOpts();
+    buildAndRenderDl();
+    statusEl.style.color = "var(--green-d)";
+    statusEl.textContent = "✅ 儲存成功！";
+    saveBtn.textContent  = "✓ 已儲存";
+    setTimeout(() => closeDlEdit(), 1200);
+  } catch(err) {
+    statusEl.style.color = "var(--red)";
+    statusEl.textContent = "❌ " + err.message;
+    saveBtn.disabled = false;
+    saveBtn.textContent = "💾 重試";
+  }
+}
+window.saveDlEditModal = saveDlEditModal;
+
 
 // ── 全域狀態 ─────────────────────────────────
 let RAW = [], filtered = [];
@@ -939,6 +1333,9 @@ async function loadFromFirebase() {
     updSheetOpts(); updSysOpts(); updCatOpts(); updDetFilters();
     renderAll();
 
+    // 同步載入設備清單（不阻塞主流程，背景執行）
+    initDeviceList().catch(e => console.warn("設備清單背景載入失敗：", e));
+
     hideLoad();
     console.log(`✅ 成功從 Firebase 載入 ${RAW.length} 筆歷史資料`);
 
@@ -975,20 +1372,48 @@ function updSysOpts() {
     list.map(s => `<option value="${escQ(s)}">${esc(s)}</option>`).join("");
   sel.value = selSys === "ALL" ? "ALL" : selSys;
 }
+let selDevCat = "ALL"; // 第四級：設備種類細項
+
 function updCatOpts() {
   let base = RAW;
   if (selSheet !== "ALL") base = base.filter(r => r.sheetSource === selSheet);
   if (selSys   !== "ALL") base = base.filter(r => r.faultType   === selSys);
+  // 第三級：設備總類（deviceCat）
   const cats = [...new Set(base.map(r => r.deviceCat).filter(v => v && v !== "無"))].sort();
-  const sel = document.getElementById("selCat");
-  sel.innerHTML = `<option value="ALL">全部設備種類</option>` +
-    cats.map(c => `<option value="${escQ(c)}">${esc(c)}</option>`).join("");
-  sel.value = selCat === "ALL" ? "ALL" : selCat;
-  // 同步設備頁
-  document.getElementById("devFilterCat").innerHTML = sel.innerHTML;
+  const sel3 = document.getElementById("selCat");
+  sel3.innerHTML = `<option value="ALL">全部設備總類</option>` +
+    cats.map(v => `<option value="${escQ(v)}">${esc(v)}</option>`).join("");
+  sel3.value = selCat === "ALL" ? "ALL" : selCat;
+  // 同步更新第四級
+  updDevCatOpts();
+  // 同步設備排名頁選項
+  document.getElementById("devFilterCat").innerHTML = `<option value="ALL">全部設備總類</option>` +
+    cats.map(v => `<option value="${escQ(v)}">${esc(v)}</option>`).join("");
   const allSys = [...new Set(RAW.map(r => r.faultType).filter(Boolean))].sort();
   document.getElementById("devFilterSys").innerHTML = `<option value="ALL">全部系統</option>` +
     allSys.map(s => `<option value="${escQ(s)}">${esc(s)}</option>`).join("");
+  // 同步故障明細設備總類選項
+  const detCatSel = document.getElementById("detFilterCat");
+  if (detCatSel) {
+    detCatSel.innerHTML = `<option value="ALL">全部設備總類</option>` +
+      cats.map(v => `<option value="${escQ(v)}">${esc(v)}</option>`).join("");
+  }
+}
+
+function updDevCatOpts() {
+  let base = RAW;
+  if (selSheet !== "ALL") base = base.filter(r => r.sheetSource === selSheet);
+  if (selSys   !== "ALL") base = base.filter(r => r.faultType   === selSys);
+  if (selCat   !== "ALL") base = base.filter(r => r.deviceCat   === selCat);
+  // deviceName2 作為「設備種類細項」，若無則不顯示
+  const devCats = [...new Set(base.map(r => r.deviceName2).filter(Boolean))].sort();
+  const sel4 = document.getElementById("selDevCat");
+  if (sel4) {
+    sel4.innerHTML = `<option value="ALL">全部設備種類</option>` +
+      devCats.map(v => `<option value="${escQ(v)}">${esc(v)}</option>`).join("");
+    sel4.value = selDevCat === "ALL" ? "ALL" : selDevCat;
+    sel4.disabled = devCats.length === 0;
+  }
 }
 function updDetFilters() {
   const sysList = [...new Set(RAW.map(r => r.faultType).filter(Boolean))].sort();
@@ -1004,21 +1429,24 @@ function clearDetFilters() {
 }
 window.clearDetFilters = clearDetFilters;
 
-function onSheetChange(v){ selSheet=v; selSys="ALL"; selCat="ALL"; updSysOpts(); updCatOpts(); renderAll(); }
-function onSysChange(v)  { selSys=v;                selCat="ALL"; updCatOpts(); renderAll(); }
-function onCatChange(v)  { selCat=v; renderAll(); }
-function resetAll()      { selSheet="ALL"; selSys="ALL"; selCat="ALL"; updSheetOpts(); updSysOpts(); updCatOpts(); renderAll(); }
-_fn.onSheetChange = onSheetChange;
-_fn.onSysChange   = onSysChange;
-_fn.onCatChange   = onCatChange;
-_fn.resetAll      = resetAll;
+function onSheetChange(v){ selSheet=v; selSys="ALL"; selCat="ALL"; selDevCat="ALL"; updSysOpts(); updCatOpts(); renderAll(); }
+function onSysChange(v)  { selSys=v;                 selCat="ALL"; selDevCat="ALL"; updCatOpts(); renderAll(); }
+function onCatChange(v)  { selCat=v; selDevCat="ALL"; updDevCatOpts(); renderAll(); }
+function onDevCatChange(v){ selDevCat=v; renderAll(); }
+function resetAll()      { selSheet="ALL"; selSys="ALL"; selCat="ALL"; selDevCat="ALL"; updSheetOpts(); updSysOpts(); updCatOpts(); renderAll(); }
+_fn.onSheetChange  = onSheetChange;
+_fn.onSysChange    = onSysChange;
+_fn.onCatChange    = onCatChange;
+_fn.onDevCatChange = onDevCatChange;
+_fn.resetAll       = resetAll;
 
 // ── 主過濾 & 重繪 ─────────────────────────────
 function applyFilter() {
   filtered = RAW.filter(r => {
-    if (selSheet !== "ALL" && r.sheetSource !== selSheet) return false;
-    if (selSys   !== "ALL" && r.faultType   !== selSys)  return false;
-    if (selCat   !== "ALL" && r.deviceCat   !== selCat)  return false;
+    if (selSheet   !== "ALL" && r.sheetSource !== selSheet)   return false;
+    if (selSys     !== "ALL" && r.faultType   !== selSys)     return false;
+    if (selCat     !== "ALL" && r.deviceCat   !== selCat)     return false;
+    if (selDevCat  !== "ALL" && r.deviceName2 !== selDevCat)  return false;
     return true;
   });
 }
@@ -1027,7 +1455,7 @@ function renderAll() {
   const hasFil = selSheet !== "ALL" || selSys !== "ALL" || selCat !== "ALL";
   document.getElementById("btnReset").style.display = hasFil ? "" : "none";
   document.getElementById("filterCount").textContent = filtered.length;
-  renderKPI(); renderPie(); renderBar(); renderLine();
+  renderKPI(); rebuildChartExcludeLists(); renderPie(); renderBar(); renderLine();
   renderDevTable();
   detPage = 1; renderDetail();
 }
@@ -1047,10 +1475,89 @@ function renderKPI() {
   document.getElementById("kpiDaysUnit").textContent = avg ? "天" : "";
 }
 
+// ── 圖表排除集合 ─────────────────────────────
+const pieExcluded = new Set(); // 被排除的系統名稱
+const barExcluded = new Set(); // 被排除的設備種類
+
+// 展開/收起篩選面板
+window.toggleChartExclude = function(type) {
+  const panel = document.getElementById(type + "ExcludePanel");
+  const btn   = document.getElementById(type + "ExcludeBtn");
+  const open  = panel.style.display === "none";
+  panel.style.display = open ? "" : "none";
+  btn.style.background = open ? "var(--blue-l)" : "var(--bg2)";
+  btn.style.color      = open ? "var(--blue-d)"  : "var(--txt2)";
+  btn.style.borderColor= open ? "var(--blue)"    : "var(--border2)";
+};
+
+// 全選 / 全取消
+window.toggleAllPie = function(checked) {
+  document.querySelectorAll(".pie-chk").forEach(cb => {
+    cb.checked = checked;
+    if (checked) pieExcluded.delete(cb.value);
+    else          pieExcluded.add(cb.value);
+  });
+  renderPie();
+};
+window.toggleAllBar = function(checked) {
+  document.querySelectorAll(".bar-chk").forEach(cb => {
+    cb.checked = checked;
+    if (checked) barExcluded.delete(cb.value);
+    else          barExcluded.add(cb.value);
+  });
+  renderBar();
+};
+
+// 單項勾選切換
+window.togglePieItem = function(val, checked) {
+  if (checked) pieExcluded.delete(val); else pieExcluded.add(val);
+  renderPie();
+};
+window.toggleBarItem = function(val, checked) {
+  if (checked) barExcluded.delete(val); else barExcluded.add(val);
+  renderBar();
+};
+
+// 建立圖表篩選清單（資料變更時重建）
+function rebuildChartExcludeLists() {
+  // 圓餅圖：所有系統
+  const allSys = [...new Set(filtered.map(r=>r.faultType).filter(Boolean))]
+    .sort((a,b) => {
+      // 依故障次數降序排列
+      const ca = filtered.filter(r=>r.faultType===a).length;
+      const cb = filtered.filter(r=>r.faultType===b).length;
+      return cb - ca;
+    });
+  document.getElementById("pieExcludeList").innerHTML = allSys.map(s => {
+    const checked = !pieExcluded.has(s);
+    return `<label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 6px;border-radius:4px;background:${checked?"var(--blue-l)":"var(--bg0)"};border:1px solid ${checked?"var(--blue)":"var(--border2)"};cursor:pointer;white-space:nowrap">
+      <input type="checkbox" class="pie-chk" value="${s.replace(/"/g,'&quot;')}" ${checked?"checked":""}
+        onchange="togglePieItem(this.value,this.checked)" style="width:11px;height:11px;cursor:pointer"/>
+      ${esc(s)}
+    </label>`;
+  }).join("");
+
+  // 長條圖：所有設備種類（取前30名）
+  const catCnt = {};
+  filtered.forEach(r => { if(r.deviceCat && r.deviceCat!=="無") catCnt[r.deviceCat]=(catCnt[r.deviceCat]||0)+1; });
+  const allCats = Object.entries(catCnt).sort((a,b)=>b[1]-a[1]).map(([k])=>k);
+  document.getElementById("barExcludeList").innerHTML = allCats.map(c => {
+    const checked = !barExcluded.has(c);
+    return `<label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 6px;border-radius:4px;background:${checked?"var(--blue-l)":"var(--bg0)"};border:1px solid ${checked?"var(--blue)":"var(--border2)"};cursor:pointer;white-space:nowrap">
+      <input type="checkbox" class="bar-chk" value="${c.replace(/"/g,'&quot;')}" ${checked?"checked":""}
+        onchange="toggleBarItem(this.value,this.checked)" style="width:11px;height:11px;cursor:pointer"/>
+      ${esc(c)}
+    </label>`;
+  }).join("");
+}
+
 // ── 圓餅圖 ────────────────────────────────────
 function renderPie() {
   const cnt = {};
-  filtered.forEach(r => { if(r.faultType) cnt[r.faultType] = (cnt[r.faultType]||0)+1; });
+  filtered.forEach(r => {
+    if (r.faultType && !pieExcluded.has(r.faultType))
+      cnt[r.faultType] = (cnt[r.faultType]||0)+1;
+  });
   const d = Object.entries(cnt).sort((a,b) => b[1]-a[1]).slice(0,10);
   const lb = d.map(x=>x[0]), vl = d.map(x=>x[1]), cl = lb.map((_,i) => PAL[i%PAL.length]);
   document.getElementById("pieLegend").innerHTML =
@@ -1063,7 +1570,11 @@ function renderPie() {
 // ── 長條圖 ────────────────────────────────────
 function renderBar() {
   const cnt = {};
-  filtered.forEach(r => { if(r.deviceCat && r.deviceCat !== "無") cnt[r.deviceCat] = (cnt[r.deviceCat]||0)+1; });
+  filtered.forEach(r => {
+    if (r.deviceCat && r.deviceCat !== "無" && !barExcluded.has(r.deviceCat))
+      cnt[r.deviceCat] = (cnt[r.deviceCat]||0)+1;
+  });
+  // 排除後取 Top 10
   const d = Object.entries(cnt).sort((a,b) => b[1]-a[1]).slice(0,10);
   const ctx = document.getElementById("barChart").getContext("2d");
   if (barInst) barInst.destroy();
@@ -1123,6 +1634,124 @@ function sortBy(col) {
 _fn.sortBy = sortBy;
 
 function renderDevTable() { buildDev(); document.getElementById("devCount").textContent="共 "+devStats.length+" 個設備/種類"; renderDevBody(); }
+// ── 各頁「來源」變更時，同步更新下層選單選項 ─────────
+
+// 設備排名頁：來源→系統→設備總類→設備種類
+function onDevSrcChange(srcCode) {
+  // 重置下層選單
+  document.getElementById("devFilterSys").value    = "ALL";
+  document.getElementById("devFilterCat").value    = "ALL";
+  const devDevCat = document.getElementById("devFilterDevCat");
+  if (devDevCat) devDevCat.value = "ALL";
+
+  // 依來源過濾 RAW，重建系統選單
+  const base = srcCode === "ALL" ? RAW : RAW.filter(r => r.systemCode === srcCode);
+  const sysList = [...new Set(base.map(r => r.faultType).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"zh"));
+  const catList  = [...new Set(base.map(r => r.deviceCat).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"zh"));
+
+  document.getElementById("devFilterSys").innerHTML =
+    `<option value="ALL">全部系統</option>` +
+    sysList.map(s=>`<option value="${escQ(s)}">${esc(s)}</option>`).join("");
+
+  document.getElementById("devFilterCat").innerHTML =
+    `<option value="ALL">全部設備總類</option>` +
+    catList.map(c=>`<option value="${escQ(c)}">${esc(c)}</option>`).join("");
+
+  if (devDevCat) devDevCat.innerHTML = `<option value="ALL">全部設備種類</option>`;
+
+  renderDevBody();
+}
+_fn.onDevSrcChange = onDevSrcChange;
+
+// 故障明細頁：來源→系統→設備總類
+function onDetSrcChange(srcCode) {
+  document.getElementById("detFilterSys").value = "ALL";
+  document.getElementById("detFilterCat").value = "ALL";
+  const devCatEl = document.getElementById("detFilterDevCat");
+  if (devCatEl) devCatEl.value = "ALL";
+
+  const base = srcCode === "ALL" ? RAW : RAW.filter(r => r.systemCode === srcCode);
+  const sysList = [...new Set(base.map(r => r.faultType).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"zh"));
+  const catList  = [...new Set(base.map(r => r.deviceCat).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"zh"));
+
+  document.getElementById("detFilterSys").innerHTML =
+    `<option value="ALL">全部系統</option>` +
+    sysList.map(s=>`<option value="${escQ(s)}">${esc(s)}</option>`).join("");
+
+  document.getElementById("detFilterCat").innerHTML =
+    `<option value="ALL">全部設備總類</option>` +
+    catList.map(c=>`<option value="${escQ(c)}">${esc(c)}</option>`).join("");
+
+  if (devCatEl) devCatEl.innerHTML = `<option value="ALL">全部設備種類</option>`;
+
+  detPage = 1; renderDetail();
+}
+_fn.onDetSrcChange = onDetSrcChange;
+
+// 設備清單頁：來源→子系統→設備總類
+function onDlSrcChange(srcCode) {
+  document.getElementById("dlFilterSysName").value = "ALL";
+  document.getElementById("dlFilterCat").value     = "ALL";
+
+  const base     = srcCode === "ALL" ? DEVICE_LIST : DEVICE_LIST.filter(d => d.systemCode === srcCode);
+  const sysNames = [...new Set(base.map(d=>d.systemName).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"zh"));
+  const cats     = [...new Set(base.map(d=>d.deviceCat ).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"zh"));
+
+  document.getElementById("dlFilterSysName").innerHTML =
+    `<option value="ALL">全部子系統</option>` +
+    sysNames.map(s=>`<option value="${escQ(s)}">${esc(s)}</option>`).join("");
+
+  document.getElementById("dlFilterCat").innerHTML =
+    `<option value="ALL">全部設備種類</option>` +
+    cats.map(c=>`<option value="${escQ(c)}">${esc(c)}</option>`).join("");
+
+  dlPage = 1; buildAndRenderDl();
+}
+_fn.onDlSrcChange = onDlSrcChange;
+
+// 設備清單頁：子系統變更→更新設備種類
+function onDlSysNameChange(sysName) {
+  document.getElementById("dlFilterCat").value = "ALL";
+  const srcF = (document.getElementById("dlFilterSrc")||{value:"ALL"}).value;
+  let base = srcF === "ALL" ? DEVICE_LIST : DEVICE_LIST.filter(d => d.systemCode === srcF);
+  if (sysName !== "ALL") base = base.filter(d => d.systemName === sysName);
+  const cats = [...new Set(base.map(d=>d.deviceCat).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"zh"));
+  document.getElementById("dlFilterCat").innerHTML =
+    `<option value="ALL">全部設備種類</option>` +
+    cats.map(c=>`<option value="${escQ(c)}">${esc(c)}</option>`).join("");
+  dlPage = 1; buildAndRenderDl();
+}
+_fn.onDlSysNameChange = onDlSysNameChange;
+
+// 設備排名頁：系統變更→更新設備總類
+// (devFilterSys change 已在 renderDevBody 中處理過濾，但需要同步更新 devFilterCat 選項)
+// 在 change 委派裡 devFilterSys 直接 renderDevBody，這裡另外補上同步選單更新
+function onDevSysChange(sysVal) {
+  document.getElementById("devFilterCat").value = "ALL";
+  const srcF = (document.getElementById("devFilterSrc")||{value:"ALL"}).value;
+  let base = srcF === "ALL" ? RAW : RAW.filter(r => r.systemCode === srcF);
+  if (sysVal !== "ALL") base = base.filter(r => r.faultType === sysVal);
+  const catList = [...new Set(base.map(r=>r.deviceCat).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"zh"));
+  document.getElementById("devFilterCat").innerHTML =
+    `<option value="ALL">全部設備總類</option>` +
+    catList.map(c=>`<option value="${escQ(c)}">${esc(c)}</option>`).join("");
+  renderDevBody();
+}
+_fn.onDevSysChange = onDevSysChange;
+
+function onDetSysChange(sysVal) {
+  document.getElementById("detFilterCat").value = "ALL";
+  const srcF = (document.getElementById("detFilterSrc")||{value:"ALL"}).value;
+  let base = srcF === "ALL" ? RAW : RAW.filter(r => r.systemCode === srcF);
+  if (sysVal !== "ALL") base = base.filter(r => r.faultType === sysVal);
+  const catList = [...new Set(base.map(r=>r.deviceCat).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"zh"));
+  document.getElementById("detFilterCat").innerHTML =
+    `<option value="ALL">全部設備總類</option>` +
+    catList.map(c=>`<option value="${escQ(c)}">${esc(c)}</option>`).join("");
+  detPage = 1; renderDetail();
+}
+_fn.onDetSysChange = onDetSysChange;
+
 function renderDevBody() {
   const search = (document.getElementById("devSearch")||{value:""}).value.toLowerCase();
   const catF   = (document.getElementById("devFilterCat")||{value:"ALL"}).value;
@@ -1168,15 +1797,19 @@ _fn.renderDevBody = renderDevBody;
 // ── 明細（含排序＋多重篩選）───────────────────
 function getDetData() {
   const search = (document.getElementById("detSearch")||{value:""}).value.toLowerCase();
-  const srcF   = (document.getElementById("detFilterSrc")||{value:"ALL"}).value;
-  const sysF   = (document.getElementById("detFilterSys")||{value:"ALL"}).value;
-  const sevF   = (document.getElementById("detFilterSev")||{value:"ALL"}).value;
-  const doneF  = (document.getElementById("detFilterDone")||{value:"ALL"}).value;
+  const srcF    = (document.getElementById("detFilterSrc")   ||{value:"ALL"}).value;
+  const sysF    = (document.getElementById("detFilterSys")   ||{value:"ALL"}).value;
+  const catF    = (document.getElementById("detFilterCat")   ||{value:"ALL"}).value;
+  const devCatF = (document.getElementById("detFilterDevCat")||{value:"ALL"}).value;
+  const sevF    = (document.getElementById("detFilterSev")   ||{value:"ALL"}).value;
+  const doneF   = (document.getElementById("detFilterDone")  ||{value:"ALL"}).value;
 
   let data = filtered.filter(r => {
-    if (srcF  !== "ALL" && r.systemCode !== srcF)       return false;
-    if (sysF  !== "ALL" && r.faultType  !== sysF)       return false;
-    if (sevF  !== "ALL" && r.severity   !== sevF)       return false;
+    if (srcF    !== "ALL" && r.systemCode !== srcF)    return false;
+    if (sysF    !== "ALL" && r.faultType  !== sysF)    return false;
+    if (catF    !== "ALL" && r.deviceCat  !== catF)    return false;
+    if (devCatF !== "ALL" && r.deviceName2!== devCatF) return false;
+    if (sevF    !== "ALL" && r.severity   !== sevF)    return false;
     if (doneF === "done" && !isClosed(r))               return false;
     if (doneF === "open" && isClosed(r))                return false;
     if (search && !r.caseNo.toLowerCase().includes(search) &&
@@ -1218,16 +1851,19 @@ function renderDetail() {
       <td class="mono">${esc(r.caseNo||"不開單")}</td>
       <td style="white-space:nowrap">${esc(r.notifyTime||"—")}</td>
       <td><span class="chip ${r.srcCls}">${esc(r.srcLabel)}</span></td>
-      <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.faultType||"—")}</td>
-      <td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.deviceCat||"—")}</td>
-      <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:Consolas,monospace;font-size:12px">${esc(r.deviceName||"—")}</td>
-      <td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.location||"—")}</td>
+      <td style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.faultType||"—")}</td>
+      <td style="max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.deviceCat||"—")}</td>
+      <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.deviceName2||r.deviceCat||"—")}</td>
+      <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:Consolas,monospace;font-size:11px">${esc(r.deviceName||"—")}</td>
+      <td style="max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.location||"—")}</td>
       <td><span class="chip ${big?"chip-red":"chip-amber"}">${esc(r.severity||"小故障")}</span></td>
       <td style="text-align:center">${done?`<span style="color:var(--green);font-weight:700">✓</span>`:`<span style="color:var(--amber)">…</span>`}</td>
+      <td style="max-width:160px;font-size:11px;color:var(--txt2);word-break:break-all">${esc((r.description||"").slice(0,60))}</td>
+      <td style="max-width:160px;font-size:11px;color:var(--txt2);word-break:break-all">${esc((r.repairAction||"").slice(0,60))}</td>
     </tr>`;
   }).join("");
   document.getElementById("detailBody").innerHTML = rows ||
-    `<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--txt3)">無符合條件之記錄</td></tr>`;
+    `<tr><td colspan="12" style="text-align:center;padding:2rem;color:var(--txt3)">無符合條件之記錄</td></tr>`;
 
   let ph = `<button onclick="goPage(${detPage-1})" ${detPage===1?"disabled":""}>‹</button>`;
   const s=Math.max(1,Math.min(detPage-3,tp-6)), e=Math.min(tp,s+6);
@@ -1269,7 +1905,7 @@ function openModal(cat, name, sys, cls) {
     <div class="mk-card"><div class="mk-num" style="color:var(--blue)">${rec.length}</div><div class="mk-lbl">歷史故障次數</div></div>
     <div class="mk-card"><div class="mk-num" style="color:var(--red)">${rec.length-cl}</div><div class="mk-lbl">待結案</div></div>
     <div class="mk-card"><div class="mk-num" style="color:var(--green)">${cl}</div><div class="mk-lbl">已結案</div></div>
-    <div class="mk-card"><div class="mk-num" style="color:var(--amber)">${avg??"—"}</div><div class="mk-lbl">平均修復天數</div></div>`;
+    <div class="mk-card"><div class="mk-num" style="color:var(--amber)">${mj}</div><div class="mk-lbl">大故障次數</div></div>`;
 
   const tbody = document.getElementById("modalBody"), empty = document.getElementById("modalEmpty");
   if (rec.length === 0) { tbody.innerHTML=""; empty.style.display=""; }
@@ -1277,17 +1913,16 @@ function openModal(cat, name, sys, cls) {
     empty.style.display = "none";
     tbody.innerHTML = rec.map((r,i) => {
       const big=r.severity==="大故障", done=isClosed(r);
-      const d = calcDays(r.notifyTime, r.fixTime);
-      const dc = d===null?"":d<=3?"color:var(--green-d)":d<=14?"color:var(--amber-d)":"color:var(--red)";
       return `<tr style="${i%2?"background:rgba(0,0,0,.018)":""}">
-        <td class="mono" style="white-space:nowrap">${esc(r.caseNo||"不開單")}</td>
+        <td class="mono" style="white-space:nowrap;font-size:12px">${esc(r.caseNo||"不開單")}</td>
         <td style="white-space:nowrap;font-size:12px">${esc(r.notifyTime||"—")}</td>
-        <td style="white-space:nowrap;font-size:12px;color:var(--txt2)">${esc(r.fixTime||"—")}</td>
-        <td style="text-align:center;font-size:12px;${dc}">${d!==null?d+"天":"—"}</td>
         <td><span class="chip ${big?"chip-red":"chip-amber"}">${esc(r.severity||"小故障")}</span></td>
         <td style="text-align:center">${done?`<span style="color:var(--green);font-weight:700">✓</span>`:`<span style="color:var(--amber)">…</span>`}</td>
         <td style="max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">${esc(r.location||"—")}</td>
-        <td style="color:var(--txt2);max-width:220px;word-break:break-all;font-size:12px">${esc((r.description||r.repairAction||"—").slice(0,80))}</td>
+        <td style="font-size:12px;color:var(--txt2);max-width:200px;word-break:break-all">${esc(r.description||"—")}</td>
+        <td style="font-size:12px;color:var(--txt2);max-width:200px;word-break:break-all">${esc(r.repairAction||"—")}</td>
+        <td style="font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.partBrand||r.deviceName||"—")}</td>
+        <td style="font-size:12px;max-width:140px;word-break:break-all;color:var(--txt2)">${esc(r.partSpec||"—")}</td>
       </tr>`;
     }).join("");
   }
